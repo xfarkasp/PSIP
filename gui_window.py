@@ -3,7 +3,7 @@ import threading
 
 from PyQt5.QtCore import QTimer, pyqtSlot
 from PyQt5.QtWidgets import QApplication, QMainWindow, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget, \
-    QPlainTextEdit, QSizePolicy, QLabel
+    QPlainTextEdit, QSizePolicy, QLabel, QHBoxLayout
 
 from Switch import Switch, send_synthetic_packet
 
@@ -45,6 +45,7 @@ class TableExample(QMainWindow):
         # Set the table headers
         table.setVerticalHeaderLabels(['PORT 0', 'PORT 1'])
         table.setHorizontalHeaderLabels(['MAC Address', 'Timer'])
+        table.setFixedSize(205, 80)  # Set your preferred width and height
 
         # port 0 data
         table.setItem(0, 0, QTableWidgetItem('00-B0-D0-63-C2-26'))
@@ -67,12 +68,13 @@ class TableExample(QMainWindow):
 
         # Create a central widget and set the table and output_text as its layout
         central_widget = QWidget(self)
-        central_layout = QVBoxLayout(central_widget)
+        central_layout = QHBoxLayout(central_widget)
         central_layout.addWidget(table)
         central_layout.addWidget(self.output_text)
 
         # Set stretch factor for the table in the layout
         central_layout.setStretchFactor(table, 1)
+
 
         # Set the central widget of the main window
         self.setCentralWidget(central_widget)
