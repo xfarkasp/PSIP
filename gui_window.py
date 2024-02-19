@@ -3,33 +3,35 @@ import threading
 
 from PyQt5.QtCore import QTimer, pyqtSlot
 from PyQt5.QtWidgets import QApplication, QMainWindow, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget, \
-    QPlainTextEdit, QSizePolicy, QLabel, QHBoxLayout, QHeaderView
+    QPlainTextEdit, QSizePolicy, QLabel, QHBoxLayout, QHeaderView, QPushButton
 
-from Switch import Switch, send_synthetic_packet
+from Switch import Switch
 
 
 class TableExample(QMainWindow):
     def __init__(self):
         super().__init__()
         self.output_text = QPlainTextEdit(self)
+        self.timer_input_field = QPlainTextEdit(self)
+        self.timer_update_button = QPushButton('Update', self)
+        self.mac_table = QTableWidget(self)
+
+        # self.timer_update_button.clicked.connect(
+        #     lambda: self.switch)
 
         # Create an instance of the logic class
         self.switch = Switch()
 
         # Connect the custom signal to a slot (method) in the GUI class
         self.switch.log_value_changed.connect(self.add_text)
+        self.switch.port0_changed.connect(self.update_port_0)
 
         self.initUI()
-
-        # self.switch.log_value = "asdasd"
-
-        self.add_text("aaa")
 
         # Start a separate thread for sniffing packets
         sniff_thread = threading.Thread(target=self.switch.start_sniffing)
         sniff_thread.start()
 
-        send_synthetic_packet("wi-fi")
 
     @pyqtSlot(str)
     def add_text(self, text):
@@ -40,28 +42,33 @@ class TableExample(QMainWindow):
 
         self.output_text.setPlainText(updated_text)
 
+    @pyqtSlot(str)
+    def update_port_0(self, text):
+        self.mac_table.setItem(0, 0, QTableWidgetItem(text))
+
+
     def initUI(self):
-        mac_table = QTableWidget(self)
-        mac_table.setRowCount(2)
-        mac_table.setColumnCount(2)
+
+        self.mac_table.setRowCount(2)
+        self.mac_table.setColumnCount(2)
 
         # MAC table
-        mac_table.setVerticalHeaderLabels(['PORT 0', 'PORT 1'])
-        mac_table.setHorizontalHeaderLabels(['MAC Address', 'Timer'])
+        self.mac_table.setVerticalHeaderLabels(['wifi', 'PORT 1'])
+        self.mac_table.setHorizontalHeaderLabels(['MAC Address', 'Timer'])
         # mac_table.setFixedSize(205, 80)  # Set your preferred width and height
 
         # port 0 data
-        mac_table.setItem(0, 0, QTableWidgetItem('00-B0-D0-63-C2-26'))
-        mac_table.setItem(0, 1, QTableWidgetItem('-'))
+        self.mac_table.setItem(0, 0, QTableWidgetItem('NONE'))
+        self.mac_table.setItem(0, 1, QTableWidgetItem('-'))
 
         # port 1 data
-        mac_table.setItem(1, 0, QTableWidgetItem('00-B0-D0-63-C2-26'))
-        mac_table.setItem(1, 1, QTableWidgetItem('-'))
+        self.mac_table.setItem(1, 0, QTableWidgetItem('NONE'))
+        self.mac_table.setItem(1, 1, QTableWidgetItem('-'))
 
-        mac_table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.mac_table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         # Resize columns and rows to fit content
-        mac_table.resizeColumnsToContents()
-        mac_table.resizeRowsToContents()
+        self.mac_table.resizeColumnsToContents()
+        self.mac_table.resizeRowsToContents()
 
         stat_table = QTableWidget(self)
         stat_table.setRowCount(0)
@@ -71,7 +78,6 @@ class TableExample(QMainWindow):
         # Resize columns and rows to fit content
         stat_table.resizeColumnsToContents()
         stat_table.resizeRowsToContents()
-
 
         # Create a QPlainTextEdit for text output
         thread_id = threading.current_thread().ident
@@ -87,7 +93,16 @@ class TableExample(QMainWindow):
 
         # Create a layout for the tables (stacked vertically)
         table_layout = QVBoxLayout()
-        table_layout.addWidget(mac_table)
+        delay_update_layout = QHBoxLayout()
+        mac_layout = QHBoxLayout()
+
+        delay_update_layout.addWidget(self.timer_input_field)
+        delay_update_layout.addWidget(self.timer_update_button)
+
+        mac_layout.addWidget(self.mac_table)
+        mac_layout.addLayout(delay_update_layout)
+
+        table_layout.addLayout(mac_layout)
         table_layout.addWidget(stat_table)
         table_layout.setStretchFactor(stat_table, 1)
 

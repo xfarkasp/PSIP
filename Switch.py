@@ -14,13 +14,18 @@ class Switch(QObject):
 
     def __init__(self):
         super().__init__()  # Call the superclass __init__ method
+        self._packet_timeout = 30  # Timeout for MAC address entries in seconds
         self._port0_address = ""
         self._port1_address = ""
+
+        self._port0_timer = self._packet_timeout
+        self._port1_timer = self._packet_timeout
+
         self._log_value = ""
 
         self.connected_devices = {}  # Dictionary to store connected devices and their sockets
         self.mac_to_port = {'0': 'NONE', '1': 'NONE'}
-        self.packet_timeout = 30  # Timeout for MAC address entries in seconds
+
 
         self.log_value = f"a"
 
@@ -28,7 +33,9 @@ class Switch(QObject):
     def start_sniffing(self):
         sniff(prn=self.packet_callback, store=0)
 
-
+    @property
+    def packet_timeout(self):
+        return self._packet_timeout
     @property
     def port0_address(self):
         return self._port0_address
@@ -40,6 +47,11 @@ class Switch(QObject):
     @property
     def log_value(self):
         return self._log_value
+
+    @packet_timeout.setter
+    def packet_timeout(self, new_value):
+        self._packet_timeout = new_value
+        # self.packet_timeout_changed.emit(new_value)
 
     @port0_address.setter
     def port0_address(self, new_value):
@@ -56,33 +68,22 @@ class Switch(QObject):
         self._log_value = new_value
         self.log_value_changed.emit(new_value)
 
-    def determine_port(self, src_mac):
-        if src_mac not in self.mac_to_port:
-            # Assign a new port for the unknown MAC address
-            port = len(self.mac_to_port) + 1
-            self.mac_to_port[src_mac] = port
-        return self.mac_to_port[src_mac]
-
-    def get_interface_name(self, packet):
-        for interface, addrs in psutil.net_if_addrs().items():
-            for addr in addrs:
-                if addr.address == packet[Ether].src:
-                    print(interface)
-                    return interface
-        return "Unknown"
 
     def packet_callback(self, packet):
         if packet.haslayer("Ethernet"):
             src_mac = packet["Ethernet"].src
             dst_mac = packet["Ethernet"].dst
             type = packet["Ethernet"].fields["type"]
+            interface = packet.sniffed_on
 
             # print(f"Received frame from {src_mac} to {dst_mac} type {type}")
             self.log_value = f"Received frame from {src_mac} to {dst_mac} type {type}"
-            interface = self.get_interface_name(packet)
-            print(f"Frame received on interface: {interface}")
+
             # Access packet information as needed
             # print(packet.summary())
+
+            if interface == r"\Device\NPF_{15D901A8-C9F4-45C6-B753-EFAC1E2A6113}":
+                self.port0_address = src_mac
 
 
     def add_device(self, device_address, device_socket):
@@ -118,15 +119,3 @@ class Switch(QObject):
                 if current_time - timestamp > self.packet_timeout:
                     print(f"Timeout for MAC address {mac_address}. Removing association.")
                     del self.mac_to_port[mac_address]
-
-def send_synthetic_packet(interface):
-    available_interfaces = psutil.net_if_addrs().keys()
-    print(f"Available interfaces: {', '.join(available_interfaces)}")
-
-    # Check if the specified interface exists and is not a loopback interface
-    if interface in available_interfaces and not psutil.net_if_stats()[interface].isup:
-        mac_address = psutil.net_if_addrs()[interface][0].address
-        # Rest of your code for sending synthetic packet...
-        print(f"Sending synthetic packet on {interface} with MAC address: {mac_address}")
-    else:
-        print(f"Interface {interface} is not available or is a loopback interface.")
