@@ -1,4 +1,4 @@
-from scapy.all import sniff, ARP, Ether
+from scapy.all import sniff
 import psutil
 import threading
 import time
@@ -26,7 +26,6 @@ class Switch(QObject):
         self.connected_devices = {}  # Dictionary to store connected devices and their sockets
         self.mac_to_port = {'0': 'NONE', '1': 'NONE'}
 
-
         self.log_value = f"a"
 
 
@@ -48,6 +47,10 @@ class Switch(QObject):
     def log_value(self):
         return self._log_value
 
+    @property
+    def port0_timer(self):
+        return self._port0_timer
+
     @packet_timeout.setter
     def packet_timeout(self, new_value):
         self._packet_timeout = new_value
@@ -67,6 +70,12 @@ class Switch(QObject):
     def log_value(self, new_value):
         self._log_value = new_value
         self.log_value_changed.emit(new_value)
+
+    @port0_timer.setter
+    def port0_timer(self, new_value):
+        print("ou yeah")
+        self._port0_timer = new_value
+        #self.log_value_changed.emit(new_value)
 
 
     def packet_callback(self, packet):

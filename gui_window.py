@@ -28,6 +28,11 @@ class TableExample(QMainWindow):
 
         self.initUI()
 
+        # start timer for decrementing timeout
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.timer_callback)
+        self.start_timer()
+
         # Start a separate thread for sniffing packets
         sniff_thread = threading.Thread(target=self.switch.start_sniffing)
         sniff_thread.start()
@@ -45,6 +50,19 @@ class TableExample(QMainWindow):
     @pyqtSlot(str)
     def update_port_0(self, text):
         self.mac_table.setItem(0, 0, QTableWidgetItem(text))
+
+    def start_timer(self):
+        self.timer.start(1000)  # Timer interval in milliseconds (e.g., 1000 ms = 1 second)
+
+    def stop_timer(self):
+        self.timer.stop()
+
+    def timer_callback(self):
+        timer_value = self.switch.port0_timer
+        if timer_value > 0:
+            timer_value -= 1
+            self.switch.port0_timer = timer_value
+            self.mac_table.setItem(0, 1, QTableWidgetItem(str(self.switch.port0_timer)))
 
 
     def initUI(self):
