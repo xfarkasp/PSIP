@@ -3,7 +3,7 @@ import threading
 
 from PyQt5.QtCore import QTimer, pyqtSlot
 from PyQt5.QtWidgets import QApplication, QMainWindow, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget, \
-    QPlainTextEdit, QSizePolicy, QLabel, QHBoxLayout
+    QPlainTextEdit, QSizePolicy, QLabel, QHBoxLayout, QHeaderView
 
 from Switch import Switch, send_synthetic_packet
 
@@ -34,31 +34,44 @@ class TableExample(QMainWindow):
     @pyqtSlot(str)
     def add_text(self, text):
         current_text = self.output_text.toPlainText()
-        new_text = f'{text}\n'
-        self.output_text.setPlainText(current_text + new_text)
+        # Split the text into lines and keep the most recent ones
+        lines = current_text.split('\n')[-100:]
+        updated_text = '\n'.join(lines + [text])
+
+        self.output_text.setPlainText(updated_text)
 
     def initUI(self):
-        table = QTableWidget(self)
-        table.setRowCount(2)
-        table.setColumnCount(2)
+        mac_table = QTableWidget(self)
+        mac_table.setRowCount(2)
+        mac_table.setColumnCount(2)
 
-        # Set the table headers
-        table.setVerticalHeaderLabels(['PORT 0', 'PORT 1'])
-        table.setHorizontalHeaderLabels(['MAC Address', 'Timer'])
-        table.setFixedSize(205, 80)  # Set your preferred width and height
+        # MAC table
+        mac_table.setVerticalHeaderLabels(['PORT 0', 'PORT 1'])
+        mac_table.setHorizontalHeaderLabels(['MAC Address', 'Timer'])
+        # mac_table.setFixedSize(205, 80)  # Set your preferred width and height
 
         # port 0 data
-        table.setItem(0, 0, QTableWidgetItem('00-B0-D0-63-C2-26'))
-        table.setItem(0, 1, QTableWidgetItem('-'))
+        mac_table.setItem(0, 0, QTableWidgetItem('00-B0-D0-63-C2-26'))
+        mac_table.setItem(0, 1, QTableWidgetItem('-'))
 
         # port 1 data
-        table.setItem(1, 0, QTableWidgetItem('00-B0-D0-63-C2-26'))
-        table.setItem(1, 1, QTableWidgetItem('-'))
+        mac_table.setItem(1, 0, QTableWidgetItem('00-B0-D0-63-C2-26'))
+        mac_table.setItem(1, 1, QTableWidgetItem('-'))
 
-        table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        mac_table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         # Resize columns and rows to fit content
-        table.resizeColumnsToContents()
-        table.resizeRowsToContents()
+        mac_table.resizeColumnsToContents()
+        mac_table.resizeRowsToContents()
+
+        stat_table = QTableWidget(self)
+        stat_table.setRowCount(0)
+        stat_table.setColumnCount(4)
+        stat_table.setHorizontalHeaderLabels(['PORT0 INBOUND', 'PORT0 OUTBOUND', 'PORT1 INBOUND', 'PORT1 OUTBOUND'])
+
+        # Resize columns and rows to fit content
+        stat_table.resizeColumnsToContents()
+        stat_table.resizeRowsToContents()
+
 
         # Create a QPlainTextEdit for text output
         thread_id = threading.current_thread().ident
@@ -66,20 +79,29 @@ class TableExample(QMainWindow):
 
         print(f"Thread ID: {thread_id}")
 
-        # Create a central widget and set the table and output_text as its layout
+        # Create a central widget
         central_widget = QWidget(self)
+
+        # Create a layout for the central widget
         central_layout = QHBoxLayout(central_widget)
-        central_layout.addWidget(table)
+
+        # Create a layout for the tables (stacked vertically)
+        table_layout = QVBoxLayout()
+        table_layout.addWidget(mac_table)
+        table_layout.addWidget(stat_table)
+        table_layout.setStretchFactor(stat_table, 1)
+
+        # Add the table layout to the central layout
+        central_layout.addLayout(table_layout)
+
+        # Add the output text area to the central layout
         central_layout.addWidget(self.output_text)
-
-        # Set stretch factor for the table in the layout
-        central_layout.setStretchFactor(table, 1)
-
+        self.output_text.setReadOnly(True)
 
         # Set the central widget of the main window
         self.setCentralWidget(central_widget)
 
-        self.setGeometry(100, 100, 400, 300)
+        # self.setGeometry(100, 100, 800, 600)  # Adjust the size accordingly
         self.setWindowTitle('The Switcher')
 
 def main():

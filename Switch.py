@@ -54,7 +54,6 @@ class Switch(QObject):
     @log_value.setter
     def log_value(self, new_value):
         self._log_value = new_value
-        print("aaaaaaaaaa")
         self.log_value_changed.emit(new_value)
 
     def determine_port(self, src_mac):
@@ -78,12 +77,12 @@ class Switch(QObject):
             dst_mac = packet["Ethernet"].dst
             type = packet["Ethernet"].fields["type"]
 
-            print(f"Received frame from {src_mac} to {dst_mac} type {type}")
+            # print(f"Received frame from {src_mac} to {dst_mac} type {type}")
             self.log_value = f"Received frame from {src_mac} to {dst_mac} type {type}"
             interface = self.get_interface_name(packet)
             print(f"Frame received on interface: {interface}")
             # Access packet information as needed
-            print(packet.summary())
+            # print(packet.summary())
 
 
     def add_device(self, device_address, device_socket):
@@ -104,8 +103,8 @@ class Switch(QObject):
        # if destination_address == BC_MAC:
 
         if destination_device:
-            print(f"Switch: Forwarding packet from {source_address} to {destination_address}")
-            destination_device.sendall(packet)
+            # print(f"Switch: Forwarding packet from {source_address} to {destination_address}")
+            # destination_device.sendall(packet)
             # Update the timestamp for the MAC address associated with the outgoing port
             self.mac_to_port[source_address] = time.time()
 
