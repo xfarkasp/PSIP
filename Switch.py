@@ -1,6 +1,4 @@
 from scapy.all import sniff
-import psutil
-import threading
 import time
 
 from PyQt5.QtCore import QObject, pyqtSignal
@@ -26,7 +24,7 @@ class Switch(QObject):
         self.connected_devices = {}  # Dictionary to store connected devices and their sockets
         self.mac_to_port = {'0': 'NONE', '1': 'NONE'}
 
-        self.log_value = f"a"
+        self.log_value = f""
 
 
     def start_sniffing(self):
@@ -84,28 +82,27 @@ class Switch(QObject):
             dst_mac = packet["Ethernet"].dst
             type = packet["Ethernet"].fields["type"]
             interface = packet.sniffed_on
-
+            #print(interface)
             # print(f"Received frame from {src_mac} to {dst_mac} type {type}")
             self.log_value = f"Received frame from {src_mac} to {dst_mac} type {type}"
 
             # Access packet information as needed
             # print(packet.summary())
 
-            if interface == r"\Device\NPF_{15D901A8-C9F4-45C6-B753-EFAC1E2A6113}":
+            if interface == r"\Device\NPF_{3BFEC34C-48A4-453C-B8FC-A0260906CCB0}":
                 self.port0_address = src_mac
+                self.port0_timer = self._packet_timeout
 
 
-    def add_device(self, device_address, device_socket):
-        self.connected_devices[device_address] = device_socket
-        # Associate the MAC address with a switch port (assuming only two ports)
-        if len(self.mac_to_port) < 2:
-            self.mac_to_port[device_address] = len(self.mac_to_port)
+    # def add_device(self, device_address, device_socket):
+    #     self.connected_devices[device_address] = device_socket
+    #     # Associate the MAC address with a switch port (assuming only two ports)
+    #     if len(self.mac_to_port) < 2:
+    #         self.mac_to_port[device_address] = len(self.mac_to_port)
 
 
-    def remove_device(self, device_address):
-        del self.connected_devices[device_address]
-        if device_address in self.mac_to_port:
-            del self.mac_to_port[device_address]
+    def remove_device(self):
+        self.port0_address = ""
 
 
     def forward_packet(self, source_address, destination_address, packet):
@@ -117,14 +114,3 @@ class Switch(QObject):
             # destination_device.sendall(packet)
             # Update the timestamp for the MAC address associated with the outgoing port
             self.mac_to_port[source_address] = time.time()
-
-
-    def check_timeout(self):
-        while True:
-            time.sleep(1)
-            current_time = time.time()
-            # Check for MAC addresses that have exceeded the timeout
-            for mac_address, timestamp in list(self.mac_to_port.items()):
-                if current_time - timestamp > self.packet_timeout:
-                    print(f"Timeout for MAC address {mac_address}. Removing association.")
-                    del self.mac_to_port[mac_address]

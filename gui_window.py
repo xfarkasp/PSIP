@@ -59,10 +59,13 @@ class TableExample(QMainWindow):
 
     def timer_callback(self):
         timer_value = self.switch.port0_timer
-        if timer_value > 0:
+        if timer_value > 0 and len(self.switch.port0_address) != 0:
             timer_value -= 1
             self.switch.port0_timer = timer_value
             self.mac_table.setItem(0, 1, QTableWidgetItem(str(self.switch.port0_timer)))
+            if timer_value == 0:
+                print("time 0")
+                self.switch.remove_device()
 
 
     def initUI(self):
@@ -100,8 +103,6 @@ class TableExample(QMainWindow):
         # Create a QPlainTextEdit for text output
         thread_id = threading.current_thread().ident
         self.output_text.setPlaceholderText(f"Thread ID: {thread_id}")
-
-        print(f"Thread ID: {thread_id}")
 
         # Create a central widget
         central_widget = QWidget(self)
