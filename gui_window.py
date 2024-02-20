@@ -15,6 +15,7 @@ class TableExample(QMainWindow):
         self.timer_input_field = QPlainTextEdit(self)
         self.timer_update_button = QPushButton('Update', self)
         self.mac_table = QTableWidget(self)
+        self.stat_table = QTableWidget(self)
 
         # self.timer_update_button.clicked.connect(
         #     lambda: self.switch)
@@ -25,6 +26,7 @@ class TableExample(QMainWindow):
         # Connect the custom signal to a slot (method) in the GUI class
         self.switch.log_value_changed.connect(self.add_text)
         self.switch.port0_changed.connect(self.update_port_0)
+        self.switch.stat_value_changed.connect(self.update_stat)
 
         self.initUI()
 
@@ -50,6 +52,16 @@ class TableExample(QMainWindow):
     @pyqtSlot(str)
     def update_port_0(self, text):
         self.mac_table.setItem(0, 0, QTableWidgetItem(text))
+
+    @pyqtSlot(list)
+    def update_stat(self, new_stats):
+        index = 0
+        for element in new_stats:
+            self.stat_table.setItem(index, 0, QTableWidgetItem(str(element)))
+            index += 1
+
+
+
 
     def start_timer(self):
         self.timer.start(1000)  # Timer interval in milliseconds (e.g., 1000 ms = 1 second)
@@ -91,14 +103,16 @@ class TableExample(QMainWindow):
         self.mac_table.resizeColumnsToContents()
         self.mac_table.resizeRowsToContents()
 
-        stat_table = QTableWidget(self)
-        stat_table.setRowCount(0)
-        stat_table.setColumnCount(4)
-        stat_table.setHorizontalHeaderLabels(['PORT0 INBOUND', 'PORT0 OUTBOUND', 'PORT1 INBOUND', 'PORT1 OUTBOUND'])
+
+        self.stat_table.setRowCount(8)
+        self.stat_table.setColumnCount(4)
+        self.stat_table.setVerticalHeaderLabels(['Ethernet II', 'ARP', 'IP', 'TCP', 'UDP', 'ICMP', 'HTTP', 'TELNET'])
+        self.stat_table.setHorizontalHeaderLabels(['PORT0 INBOUND', 'PORT0 OUTBOUND', 'PORT1 INBOUND', 'PORT1 OUTBOUND'])
+
 
         # Resize columns and rows to fit content
-        stat_table.resizeColumnsToContents()
-        stat_table.resizeRowsToContents()
+        self.stat_table.resizeColumnsToContents()
+        self.stat_table.resizeRowsToContents()
 
         # Create a QPlainTextEdit for text output
         thread_id = threading.current_thread().ident
@@ -122,8 +136,8 @@ class TableExample(QMainWindow):
         mac_layout.addLayout(delay_update_layout)
 
         table_layout.addLayout(mac_layout)
-        table_layout.addWidget(stat_table)
-        table_layout.setStretchFactor(stat_table, 1)
+        table_layout.addWidget(self.stat_table)
+        table_layout.setStretchFactor(self.stat_table, 1)
 
         # Add the table layout to the central layout
         central_layout.addLayout(table_layout)

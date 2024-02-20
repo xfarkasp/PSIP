@@ -2,6 +2,7 @@ from scapy.all import sniff
 import time
 
 from PyQt5.QtCore import QObject, pyqtSignal
+from scapy.layers.l2 import Ether
 
 BC_MAC = "FF:FF:FF:FF:FF:FF"
 class Switch(QObject):
@@ -9,6 +10,7 @@ class Switch(QObject):
     port0_changed = pyqtSignal(str)
     port1_changed = pyqtSignal(str)
     log_value_changed = pyqtSignal(str)
+    stat_value_changed = pyqtSignal(list)
 
     def __init__(self):
         super().__init__()  # Call the superclass __init__ method
@@ -21,10 +23,8 @@ class Switch(QObject):
 
         self._log_value = ""
 
-        self.connected_devices = {}  # Dictionary to store connected devices and their sockets
-        self.mac_to_port = {'0': 'NONE', '1': 'NONE'}
-
-        self.log_value = f""
+        self._por0_stats_in = [0, 0, 0, 0, 0, 0, 0, 0]
+        self._por0_stats_out = [0, 0, 0, 0, 0, 0, 0, 0]
 
 
     def start_sniffing(self):
@@ -71,10 +71,7 @@ class Switch(QObject):
 
     @port0_timer.setter
     def port0_timer(self, new_value):
-        print("ou yeah")
         self._port0_timer = new_value
-        #self.log_value_changed.emit(new_value)
-
 
     def packet_callback(self, packet):
         if packet.haslayer("Ethernet"):
@@ -92,6 +89,10 @@ class Switch(QObject):
             if interface == r"\Device\NPF_{3BFEC34C-48A4-453C-B8FC-A0260906CCB0}":
                 self.port0_address = src_mac
                 self.port0_timer = self._packet_timeout
+                if Ether in packet:
+                    print("ethernet")
+                    self._por0_stats_in[0] = self._por0_stats_in[0] + 1
+                    self.stat_value_changed.emit(self._por0_stats_in)
 
 
     # def add_device(self, device_address, device_socket):
