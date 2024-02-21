@@ -103,7 +103,6 @@ class TableExample(QMainWindow):
         self.mac_table.resizeColumnsToContents()
         self.mac_table.resizeRowsToContents()
 
-
         self.stat_table.setRowCount(8)
         self.stat_table.setColumnCount(4)
         self.stat_table.setVerticalHeaderLabels(['Ethernet II', 'ARP', 'IP', 'TCP', 'UDP', 'ICMP', 'HTTP', 'TELNET'])

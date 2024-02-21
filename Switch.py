@@ -2,7 +2,11 @@ from scapy.all import sniff
 import time
 
 from PyQt5.QtCore import QObject, pyqtSignal
-from scapy.layers.l2 import Ether
+from scapy.interfaces import get_if_list
+from scapy.layers.l2 import Ether, ARP
+from scapy.layers.inet import IP, TCP, UDP, ICMP
+from scapy.layers.http import HTTPRequest
+from scapy.sendrecv import sendp
 
 BC_MAC = "FF:FF:FF:FF:FF:FF"
 class Switch(QObject):
@@ -83,6 +87,19 @@ class Switch(QObject):
             # print(f"Received frame from {src_mac} to {dst_mac} type {type}")
             self.log_value = f"Received frame from {src_mac} to {dst_mac} type {type}"
 
+            # Get a list of interface names
+            interface_names = get_if_list()
+
+            # # Print the interface names
+            print("Available Interfaces:")
+            for iface in interface_names:
+                print(iface)
+            if TCP in packet:
+                packet[TCP].dport = 666
+                print(packet[TCP].dport)
+
+            sendp(packet, iface=r"\Device\NPF_{BFFD7AA0-6595-4116-999B-8BEBFD162B98}")
+
             # Access packet information as needed
             # print(packet.summary())
 
@@ -90,16 +107,31 @@ class Switch(QObject):
                 self.port0_address = src_mac
                 self.port0_timer = self._packet_timeout
                 if Ether in packet:
-                    print("ethernet")
                     self._por0_stats_in[0] = self._por0_stats_in[0] + 1
                     self.stat_value_changed.emit(self._por0_stats_in)
 
+                if ARP in packet:
+                    self._por0_stats_in[1] = self._por0_stats_in[1] + 1
+                    self.stat_value_changed.emit(self._por0_stats_in)
 
-    # def add_device(self, device_address, device_socket):
-    #     self.connected_devices[device_address] = device_socket
-    #     # Associate the MAC address with a switch port (assuming only two ports)
-    #     if len(self.mac_to_port) < 2:
-    #         self.mac_to_port[device_address] = len(self.mac_to_port)
+                if IP in packet:
+                    self._por0_stats_in[2] = self._por0_stats_in[2] + 1
+                    self.stat_value_changed.emit(self._por0_stats_in)
+
+                if TCP in packet:
+                    self._por0_stats_in[3] = self._por0_stats_in[3] + 1
+                    self.stat_value_changed.emit(self._por0_stats_in)
+                    if packet[TCP].dport in {80, 8080}:
+                        self._por0_stats_in[6] += 1
+                        self.stat_value_changed.emit(self._por0_stats_in)
+
+                if UDP in packet:
+                    self._por0_stats_in[4] = self._por0_stats_in[4] + 1
+                    self.stat_value_changed.emit(self._por0_stats_in)
+
+                if ICMP in packet:
+                    self._por0_stats_in[5] = self._por0_stats_in[5] + 1
+                    self.stat_value_changed.emit(self._por0_stats_in)
 
 
     def remove_device(self):
