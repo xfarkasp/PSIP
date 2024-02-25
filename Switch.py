@@ -37,7 +37,12 @@ class Switch(QObject):
 
     def start_sniffing(self, enum_int):
         callback_with_extra_arg = lambda packet: self.packet_callback(packet, enum_int)
-        sniff(prn=callback_with_extra_arg, store=0)
+        interface = ""
+        if enum_int == 0:
+            interface = self._port0_device
+        if enum_int == 1:
+            interface = self._port1_device
+        sniff(prn=callback_with_extra_arg, store=0, iface=interface)
 
     @property
     def packet_timeout(self):
@@ -105,46 +110,56 @@ class Switch(QObject):
             #     print(iface)
             if TCP in packet:
                 packet[TCP].dport = 666
-                print(packet[TCP].dport)
+                #print(packet[TCP].dport)
 
-            sendp(packet, iface=r"\Device\NPF_{BFFD7AA0-6595-4116-999B-8BEBFD162B98}")
+
 
             # Access packet information as needed
             # print(packet.summary())
-
-            if interface == desired_int:
-                self.port0_address = src_mac
-                self.port0_timer = self._packet_timeout
-                if Ether in packet:
-                    self._por0_stats_in[0] = self._por0_stats_in[0] + 1
-                    self.stat_value_changed.emit(self._por0_stats_in)
-
-                if ARP in packet:
-                    self._por0_stats_in[1] = self._por0_stats_in[1] + 1
-                    self.stat_value_changed.emit(self._por0_stats_in)
-
-                if IP in packet:
-                    self._por0_stats_in[2] = self._por0_stats_in[2] + 1
-                    self.stat_value_changed.emit(self._por0_stats_in)
-
-                if TCP in packet:
-                    self._por0_stats_in[3] = self._por0_stats_in[3] + 1
-                    self.stat_value_changed.emit(self._por0_stats_in)
-                    if packet[TCP].dport in {80, 8080}:
-                        self._por0_stats_in[6] += 1
+            if enum_int == 0:
+                sendp(packet, iface=r"\Device\NPF_{BFFD7AA0-6595-4116-999B-8BEBFD162B98}")
+                if interface == desired_int:
+                    self.port0_address = src_mac
+                    self.port0_timer = self._packet_timeout
+                    if Ether in packet:
+                        self._por0_stats_in[0] = self._por0_stats_in[0] + 1
                         self.stat_value_changed.emit(self._por0_stats_in)
 
-                if UDP in packet:
-                    self._por0_stats_in[4] = self._por0_stats_in[4] + 1
-                    self.stat_value_changed.emit(self._por0_stats_in)
+                    if ARP in packet:
+                        self._por0_stats_in[1] = self._por0_stats_in[1] + 1
+                        self.stat_value_changed.emit(self._por0_stats_in)
 
-                if ICMP in packet:
+                    if IP in packet:
+                        self._por0_stats_in[2] = self._por0_stats_in[2] + 1
+                        self.stat_value_changed.emit(self._por0_stats_in)
+
+                    if TCP in packet:
+                        self._por0_stats_in[3] = self._por0_stats_in[3] + 1
+                        self.stat_value_changed.emit(self._por0_stats_in)
+                        if packet[TCP].dport in {80, 8080}:
+                            self._por0_stats_in[6] += 1
+                            self.stat_value_changed.emit(self._por0_stats_in)
+
+                    if UDP in packet:
+                        self._por0_stats_in[4] = self._por0_stats_in[4] + 1
+                        self.stat_value_changed.emit(self._por0_stats_in)
+
+                    if ICMP in packet:
+                        self._por0_stats_in[5] = self._por0_stats_in[5] + 1
+                        self.stat_value_changed.emit(self._por0_stats_in)
+            if enum_int == 1:
+                print("enum 1")
+                if interface == desired_int:
+                    print("aaaaaasdasdasd")
                     self._por0_stats_in[5] = self._por0_stats_in[5] + 1
                     self.stat_value_changed.emit(self._por0_stats_in)
+                    if TCP in packet:
+                        if packet[TCP].dport in {666}:
+                            print("that is my boy")
+                            self._por0_stats_in[6] += 1
+                            self.stat_value_changed.emit(self._por0_stats_in)
 
-            if interface == desired_int:
-                self._por0_stats_in[5] = self._por0_stats_in[5] + 1
-                self.stat_value_changed.emit(self._por0_stats_in)
+
 
     def remove_device(self):
         self.port0_address = ""
