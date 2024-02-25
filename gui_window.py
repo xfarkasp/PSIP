@@ -1,14 +1,14 @@
 import sys
 import threading
 
-from PyQt5.QtCore import QTimer, pyqtSlot
+from PyQt5.QtCore import QTimer, pyqtSlot, Qt
 from PyQt5.QtWidgets import QApplication, QMainWindow, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget, \
-    QPlainTextEdit, QSizePolicy, QLabel, QHBoxLayout, QHeaderView, QPushButton
+    QPlainTextEdit, QSizePolicy, QLabel, QHBoxLayout, QHeaderView, QPushButton, QComboBox, QScrollBar
 
 from Switch import Switch
 
 
-class TableExample(QMainWindow):
+class Ui(QMainWindow):
     def __init__(self):
         super().__init__()
         self.output_text = QPlainTextEdit(self)
@@ -16,6 +16,9 @@ class TableExample(QMainWindow):
         self.timer_update_button = QPushButton('Update', self)
         self.mac_table = QTableWidget(self)
         self.stat_table = QTableWidget(self)
+        # comboboxes for interface select
+        self.port0_combo_box = QComboBox(self)
+        self.port1_combo_box = QComboBox(self)
 
         # self.timer_update_button.clicked.connect(
         #     lambda: self.switch)
@@ -36,8 +39,11 @@ class TableExample(QMainWindow):
         self.start_timer()
 
         # Start a separate thread for sniffing packets
-        sniff_thread = threading.Thread(target=self.switch.start_sniffing)
+        sniff_thread = threading.Thread(target=self.switch.start_sniffing, args=(0,))
         sniff_thread.start()
+
+        sniff_thread2 = threading.Thread(target=self.switch.start_sniffing, args=(1,))
+        sniff_thread2.start()
 
 
     @pyqtSlot(str)
@@ -52,6 +58,7 @@ class TableExample(QMainWindow):
     @pyqtSlot(str)
     def update_port_0(self, text):
         self.mac_table.setItem(0, 0, QTableWidgetItem(text))
+        # self.mac_table.resizeColumnsToContents()
 
     @pyqtSlot(list)
     def update_stat(self, new_stats):
@@ -59,9 +66,6 @@ class TableExample(QMainWindow):
         for element in new_stats:
             self.stat_table.setItem(index, 0, QTableWidgetItem(str(element)))
             index += 1
-
-
-
 
     def start_timer(self):
         self.timer.start(1000)  # Timer interval in milliseconds (e.g., 1000 ms = 1 second)
@@ -81,13 +85,19 @@ class TableExample(QMainWindow):
 
 
     def initUI(self):
-
+        # WIDGETS
+        self.mac_table.setMaximumHeight(105)
+        self.mac_table.setMaximumWidth(235)
         self.mac_table.setRowCount(2)
         self.mac_table.setColumnCount(2)
+
+        self.mac_table.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.mac_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
         # MAC table
         self.mac_table.setVerticalHeaderLabels(['wifi', 'PORT 1'])
         self.mac_table.setHorizontalHeaderLabels(['MAC Address', 'Timer'])
+        self.mac_table.setColumnWidth(1, 30)
         # mac_table.setFixedSize(205, 80)  # Set your preferred width and height
 
         # port 0 data
@@ -98,26 +108,21 @@ class TableExample(QMainWindow):
         self.mac_table.setItem(1, 0, QTableWidgetItem('NONE'))
         self.mac_table.setItem(1, 1, QTableWidgetItem('-'))
 
-        self.mac_table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        # Resize columns and rows to fit content
-        self.mac_table.resizeColumnsToContents()
-        self.mac_table.resizeRowsToContents()
-
         self.stat_table.setRowCount(8)
         self.stat_table.setColumnCount(4)
         self.stat_table.setVerticalHeaderLabels(['Ethernet II', 'ARP', 'IP', 'TCP', 'UDP', 'ICMP', 'HTTP', 'TELNET'])
         self.stat_table.setHorizontalHeaderLabels(['PORT0 INBOUND', 'PORT0 OUTBOUND', 'PORT1 INBOUND', 'PORT1 OUTBOUND'])
 
-
-        # Resize columns and rows to fit content
-        self.stat_table.resizeColumnsToContents()
-        self.stat_table.resizeRowsToContents()
-
         # Create a QPlainTextEdit for text output
         thread_id = threading.current_thread().ident
         self.output_text.setPlaceholderText(f"Thread ID: {thread_id}")
 
-        # Create a central widget
+        interfaces = self.switch.get_active_interfaces()
+        for iface in interfaces:
+            self.port0_combo_box.addItem(str(iface))
+            self.port1_combo_box.addItem(str(iface))
+
+        # LAYOUTS
         central_widget = QWidget(self)
 
         # Create a layout for the central widget
@@ -127,12 +132,19 @@ class TableExample(QMainWindow):
         table_layout = QVBoxLayout()
         delay_update_layout = QHBoxLayout()
         mac_layout = QHBoxLayout()
+        port_select_layout = QVBoxLayout()
 
+        self.timer_input_field.setMaximumHeight(30)
+        self.timer_input_field.setMaximumWidth(100)
         delay_update_layout.addWidget(self.timer_input_field)
         delay_update_layout.addWidget(self.timer_update_button)
 
+        port_select_layout.addWidget(self.port0_combo_box)
+        port_select_layout.addWidget(self.port1_combo_box)
+        port_select_layout.addLayout(delay_update_layout)
+
         mac_layout.addWidget(self.mac_table)
-        mac_layout.addLayout(delay_update_layout)
+        mac_layout.addLayout(port_select_layout)
 
         table_layout.addLayout(mac_layout)
         table_layout.addWidget(self.stat_table)
@@ -141,19 +153,17 @@ class TableExample(QMainWindow):
         # Add the table layout to the central layout
         central_layout.addLayout(table_layout)
 
-        # Add the output text area to the central layout
         central_layout.addWidget(self.output_text)
         self.output_text.setReadOnly(True)
 
         # Set the central widget of the main window
         self.setCentralWidget(central_widget)
 
-        # self.setGeometry(100, 100, 800, 600)  # Adjust the size accordingly
         self.setWindowTitle('The Switcher')
 
 def main():
     app = QApplication(sys.argv)
-    ex = TableExample()
+    ex = Ui()
 
     ex.show()
     sys.exit(app.exec_())

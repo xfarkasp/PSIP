@@ -22,6 +22,9 @@ class Switch(QObject):
         self._port0_address = ""
         self._port1_address = ""
 
+        self._port0_device = r"\Device\NPF_{3BFEC34C-48A4-453C-B8FC-A0260906CCB0}"
+        self._port1_device = r"\Device\NPF_{BFFD7AA0-6595-4116-999B-8BEBFD162B98}"
+
         self._port0_timer = self._packet_timeout
         self._port1_timer = self._packet_timeout
 
@@ -31,8 +34,10 @@ class Switch(QObject):
         self._por0_stats_out = [0, 0, 0, 0, 0, 0, 0, 0]
 
 
-    def start_sniffing(self):
-        sniff(prn=self.packet_callback, store=0)
+
+    def start_sniffing(self, enum_int):
+        callback_with_extra_arg = lambda packet: self.packet_callback(packet, enum_int)
+        sniff(prn=callback_with_extra_arg, store=0)
 
     @property
     def packet_timeout(self):
@@ -77,7 +82,13 @@ class Switch(QObject):
     def port0_timer(self, new_value):
         self._port0_timer = new_value
 
-    def packet_callback(self, packet):
+    def packet_callback(self, packet, enum_int):
+        desired_int = ""
+        if enum_int == 0:
+            desired_int = self._port0_device
+        elif enum_int == 1:
+            desired_int = self._port1_device
+
         if packet.haslayer("Ethernet"):
             src_mac = packet["Ethernet"].src
             dst_mac = packet["Ethernet"].dst
@@ -90,10 +101,8 @@ class Switch(QObject):
             # Get a list of interface names
             interface_names = get_if_list()
 
-            # # Print the interface names
-            print("Available Interfaces:")
-            for iface in interface_names:
-                print(iface)
+            # for iface in interface_names:
+            #     print(iface)
             if TCP in packet:
                 packet[TCP].dport = 666
                 print(packet[TCP].dport)
@@ -103,7 +112,7 @@ class Switch(QObject):
             # Access packet information as needed
             # print(packet.summary())
 
-            if interface == r"\Device\NPF_{3BFEC34C-48A4-453C-B8FC-A0260906CCB0}":
+            if interface == desired_int:
                 self.port0_address = src_mac
                 self.port0_timer = self._packet_timeout
                 if Ether in packet:
@@ -133,17 +142,15 @@ class Switch(QObject):
                     self._por0_stats_in[5] = self._por0_stats_in[5] + 1
                     self.stat_value_changed.emit(self._por0_stats_in)
 
+            if interface == desired_int:
+                self._por0_stats_in[5] = self._por0_stats_in[5] + 1
+                self.stat_value_changed.emit(self._por0_stats_in)
 
     def remove_device(self):
         self.port0_address = ""
 
 
-    def forward_packet(self, source_address, destination_address, packet):
-        destination_device = self.connected_devices.get(destination_address)
-       # if destination_address == BC_MAC:
+    def get_active_interfaces(self):
+        active_interfaces = get_if_list()
+        return active_interfaces
 
-        if destination_device:
-            # print(f"Switch: Forwarding packet from {source_address} to {destination_address}")
-            # destination_device.sendall(packet)
-            # Update the timestamp for the MAC address associated with the outgoing port
-            self.mac_to_port[source_address] = time.time()
