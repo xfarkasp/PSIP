@@ -13,15 +13,17 @@ class Ui(QMainWindow):
         super().__init__()
         self.output_text = QPlainTextEdit(self)
         self.timer_input_field = QPlainTextEdit(self)
-        self.timer_update_button = QPushButton('Update', self)
+        self.timer_update_button = QPushButton('Start', self)
         self.mac_table = QTableWidget(self)
         self.stat_table = QTableWidget(self)
-        # comboboxes for interface select
+        # combo boxes for interface select
         self.port0_combo_box = QComboBox(self)
         self.port1_combo_box = QComboBox(self)
 
-        # self.timer_update_button.clicked.connect(
-        #     lambda: self.switch)
+        self.port0_combo_box.currentIndexChanged.connect(lambda index: self.on_port0_combo_box_changed(index))
+        self.port1_combo_box.currentIndexChanged.connect(lambda index: self.on_port1_combo_box_changed(index))
+
+        self.timer_update_button.clicked.connect(lambda: self.on_timer_update_button_clicked())
 
         # Create an instance of the logic class
         self.switch = Switch()
@@ -38,14 +40,6 @@ class Ui(QMainWindow):
         self.timer.timeout.connect(self.timer_callback)
         self.start_timer()
 
-        # Start a separate thread for sniffing packets
-        sniff_thread = threading.Thread(target=self.switch.start_sniffing, args=(0,))
-        sniff_thread.start()
-
-        sniff_thread2 = threading.Thread(target=self.switch.start_sniffing, args=(1,))
-        sniff_thread2.start()
-
-
     @pyqtSlot(str)
     def add_text(self, text):
         current_text = self.output_text.toPlainText()
@@ -60,11 +54,11 @@ class Ui(QMainWindow):
         self.mac_table.setItem(0, 0, QTableWidgetItem(text))
         # self.mac_table.resizeColumnsToContents()
 
-    @pyqtSlot(list)
-    def update_stat(self, new_stats):
+    @pyqtSlot(int, list)
+    def update_stat(self, col_num, new_stats):
         index = 0
         for element in new_stats:
-            self.stat_table.setItem(index, 0, QTableWidgetItem(str(element)))
+            self.stat_table.setItem(index, col_num, QTableWidgetItem(str(element)))
             index += 1
 
     def start_timer(self):
@@ -83,6 +77,21 @@ class Ui(QMainWindow):
                 print("time 0")
                 self.switch.remove_device()
 
+    def on_port0_combo_box_changed(self, index):
+        selected_text = self.port0_combo_box.currentText()
+        self.switch.port0_device = selected_text
+
+    def on_port1_combo_box_changed(self, index):
+        selected_text = self.port1_combo_box.currentText()
+        self.switch.port1_device = selected_text
+
+    def on_timer_update_button_clicked(self):
+        # Start a separate thread for sniffing packets
+        sniff_thread = threading.Thread(target=self.switch.start_sniffing, args=(0,))
+        sniff_thread.start()
+
+        sniff_thread2 = threading.Thread(target=self.switch.start_sniffing, args=(1,))
+        sniff_thread2.start()
 
     def initUI(self):
         # WIDGETS
