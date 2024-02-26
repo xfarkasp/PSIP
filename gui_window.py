@@ -5,7 +5,7 @@ from PyQt5.QtCore import QTimer, pyqtSlot, Qt
 from PyQt5.QtWidgets import QApplication, QMainWindow, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget, \
     QPlainTextEdit, QSizePolicy, QLabel, QHBoxLayout, QHeaderView, QPushButton, QComboBox, QScrollBar
 
-from Switch import Switch
+from Switch import Switch, stop_sniffing_port_0_event, stop_sniffing_port_1_event
 
 
 class Ui(QMainWindow):
@@ -19,6 +19,10 @@ class Ui(QMainWindow):
         # comboboxes for interface select
         self.port0_combo_box = QComboBox(self)
         self.port1_combo_box = QComboBox(self)
+
+        self.port0_combo_box.currentIndexChanged.connect(self.on_port0_combo_box_changed)
+        self.port1_combo_box.currentIndexChanged.connect(self.on_port1_combo_box_changed)
+
 
         # self.timer_update_button.clicked.connect(
         #     lambda: self.switch)
@@ -38,13 +42,6 @@ class Ui(QMainWindow):
         self.timer.timeout.connect(self.timer_callback)
         self.start_timer()
 
-        # Start a separate thread for sniffing packets
-        sniff_thread = threading.Thread(target=self.switch.start_sniffing, args=(0,))
-        sniff_thread.start()
-
-        sniff_thread2 = threading.Thread(target=self.switch.start_sniffing, args=(1,))
-        sniff_thread2.start()
-
 
     @pyqtSlot(str)
     def add_text(self, text):
@@ -60,11 +57,11 @@ class Ui(QMainWindow):
         self.mac_table.setItem(0, 0, QTableWidgetItem(text))
         # self.mac_table.resizeColumnsToContents()
 
-    @pyqtSlot(list)
-    def update_stat(self, new_stats):
+    @pyqtSlot(int, list)
+    def update_stat(self, col_num, new_stats):
         index = 0
         for element in new_stats:
-            self.stat_table.setItem(index, 0, QTableWidgetItem(str(element)))
+            self.stat_table.setItem(index, col_num, QTableWidgetItem(str(element)))
             index += 1
 
     def start_timer(self):
@@ -83,6 +80,24 @@ class Ui(QMainWindow):
                 print("time 0")
                 self.switch.remove_device()
 
+    def on_port0_combo_box_changed(self, index):
+        stop_sniffing_port_0_event.set()
+        selected_text = self.port0_combo_box.currentText()
+        print(selected_text)
+        self.switch.port0_device = selected_text
+
+        sniff_thread = threading.Thread(target=self.switch.start_sniffing, args=(0,))
+        sniff_thread.start()
+
+
+    def on_port1_combo_box_changed(self, index):
+        stop_sniffing_port_1_event.set()
+        selected_text = self.port1_combo_box.currentText()
+        print("combobox1")
+        self.switch.port1_device = selected_text
+
+        sniff_thread = threading.Thread(target=self.switch.start_sniffing, args=(1,))
+        sniff_thread.start()
 
     def initUI(self):
         # WIDGETS
