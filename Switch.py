@@ -3,6 +3,7 @@ from scapy.all import sniff
 import time
 
 from PyQt5.QtCore import QObject, pyqtSignal
+from scapy.arch import get_if_hwaddr
 from scapy.interfaces import get_if_list
 from scapy.layers.l2 import Ether, ARP
 from scapy.layers.inet import IP, TCP, UDP, ICMP
@@ -47,7 +48,7 @@ class Switch(QObject):
             interface = self._port0_device
         if enum_int == 1:
             interface = self._port1_device
-        sniff(prn=callback_with_extra_arg, store=0, filter="inbound",iface=interface)
+        sniff(prn=callback_with_extra_arg, store=0,iface=interface)
 
     @property
     def packet_timeout(self):
@@ -140,8 +141,10 @@ class Switch(QObject):
             flag = True
 
             if TCP in packet:
-                if packet[TCP].dport in {80, 8080}:
+                if packet[TCP].dport in {80}:
                     local_list[6] += 1
+                if packet[TCP].dport in {8080}:
+                    local_list[7] += 1
 
         if UDP in packet:
             local_list[4] = local_list[4] + 1
@@ -152,6 +155,7 @@ class Switch(QObject):
             flag = True
 
         if flag:
+            local_list[9] = local_list[9] + 1
             self.stat_value_changed.emit(col, local_list)
 
 
@@ -163,34 +167,40 @@ class Switch(QObject):
         elif enum_int == 1:
             desired_int = self._port1_device
 
+
         if packet.haslayer("Ethernet"):
             src_mac = packet["Ethernet"].src
             dst_mac = packet["Ethernet"].dst
             type = packet["Ethernet"].fields["type"]
             interface = packet.sniffed_on
+
+            # if dst_mac == get_if_hwaddr(interface) or src_mac == get_if_hwaddr(interface):
+            #     return
             #print(interface)
             # print(f"Received frame from {src_mac} to {dst_mac} type {type}")
-            #self.log_value = f"Received frame from {src_mac} to {dst_mac} type {type}"
+            self.log_value = f"Received frame from {src_mac} to {dst_mac} type {type}"
 
             if enum_int == 0:
-                if interface == desired_int:
-                    self.port0_address = src_mac
-                    self.port0_timer = self._packet_timeout
-                    self.stat_handler(0, packet)
+                if desired_int == self.port0_device and packet.dst != self.port1_address and packet.src != self.port1_address:
+                    if interface == desired_int:
+                        self.port0_address = src_mac
+                        self.port0_timer = self._packet_timeout
+                        self.stat_handler(0, packet)
 
-                    if self.last_packet_1 != packet:
+                        #if self.last_packet_1 != packet:
                         print("poslal som 0")
                         sendp(packet, iface=self._port1_device)
                         self.stat_handler(3, packet)
                         self.last_packet_0 = packet
 
             if enum_int == 1:
-                if interface == desired_int:
-                    self.port1_address = src_mac
-                    #self.port1_timer = self._packet_timeout
-                    self.stat_handler(2, packet)
+                if desired_int == self.port1_device and packet.dst != self.port0_address and packet.src != self.port0_address:
+                    if interface == desired_int:
+                        self.port1_address = src_mac
+                        #self.port1_timer = self._packet_timeout
+                        self.stat_handler(2, packet)
 
-                    if self.last_packet_0 != packet:
+                        #if self.last_packet_0 != packet:
                         print("poslal som 1")
                         sendp(packet, iface=self._port0_device)
                         self.stat_handler(1, packet)
