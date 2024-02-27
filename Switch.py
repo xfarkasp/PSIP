@@ -31,10 +31,13 @@ class Switch(QObject):
 
         self._log_value = ""
 
-        self._por0_stats_in = [0, 0, 0, 0, 0, 0, 0, 0]
-        self._por0_stats_out = [0, 0, 0, 0, 0, 0, 0, 0]
-        self._por1_stats_in = [0, 0, 0, 0, 0, 0, 0, 0]
-        self._por1_stats_out = [0, 0, 0, 0, 0, 0, 0, 0]
+        self._por0_stats_in = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        self._por0_stats_out = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        self._por1_stats_in = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        self._por1_stats_out = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+        self.last_packet_0 = None
+        self.last_packet_1 = None
 
 
     def start_sniffing(self, enum_int):
@@ -44,7 +47,7 @@ class Switch(QObject):
             interface = self._port0_device
         if enum_int == 1:
             interface = self._port1_device
-        sniff(prn=callback_with_extra_arg, store=0, iface=interface)
+        sniff(prn=callback_with_extra_arg, store=0, filter="inbound",iface=interface)
 
     @property
     def packet_timeout(self):
@@ -95,11 +98,6 @@ class Switch(QObject):
     @port1_device.setter
     def port1_device(self, new_value):
         self._port1_device = new_value
-
-    @port1_device.setter
-    def port1_address(self, new_value):
-        self._port1_address = new_value
-        self.port1_changed.emit(new_value)
 
     @log_value.setter
     def log_value(self, new_value):
@@ -158,6 +156,7 @@ class Switch(QObject):
 
 
     def packet_callback(self, packet, enum_int):
+
         desired_int = ""
         if enum_int == 0:
             desired_int = self._port0_device
@@ -171,7 +170,7 @@ class Switch(QObject):
             interface = packet.sniffed_on
             #print(interface)
             # print(f"Received frame from {src_mac} to {dst_mac} type {type}")
-            self.log_value = f"Received frame from {src_mac} to {dst_mac} type {type}"
+            #self.log_value = f"Received frame from {src_mac} to {dst_mac} type {type}"
 
             if enum_int == 0:
                 if interface == desired_int:
@@ -179,10 +178,11 @@ class Switch(QObject):
                     self.port0_timer = self._packet_timeout
                     self.stat_handler(0, packet)
 
-                    sendp(packet, iface=self._port1_device)
-                   # print("ok1")
-                    self.stat_handler(1, packet)
-
+                    if self.last_packet_1 != packet:
+                        print("poslal som 0")
+                        sendp(packet, iface=self._port1_device)
+                        self.stat_handler(3, packet)
+                        self.last_packet_0 = packet
 
             if enum_int == 1:
                 if interface == desired_int:
@@ -190,18 +190,11 @@ class Switch(QObject):
                     #self.port1_timer = self._packet_timeout
                     self.stat_handler(2, packet)
 
-
-                    sendp(packet, iface=self._port0_device)
-                    self.stat_handler(3, packet)
-
-
-                    # try:
-                    #     sendp(packet, iface=self._port0_device)
-                    #
-                    # except:
-                    #     print(desired_int)
-
-
+                    if self.last_packet_0 != packet:
+                        print("poslal som 1")
+                        sendp(packet, iface=self._port0_device)
+                        self.stat_handler(1, packet)
+                        self.last_packet_1 = packet
 
     def remove_device(self):
         self.port0_address = ""

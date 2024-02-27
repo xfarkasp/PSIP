@@ -117,9 +117,9 @@ class Ui(QMainWindow):
         self.mac_table.setItem(1, 0, QTableWidgetItem('NONE'))
         self.mac_table.setItem(1, 1, QTableWidgetItem('-'))
 
-        self.stat_table.setRowCount(8)
+        self.stat_table.setRowCount(10)
         self.stat_table.setColumnCount(4)
-        self.stat_table.setVerticalHeaderLabels(['Ethernet II', 'ARP', 'IP', 'TCP', 'UDP', 'ICMP', 'HTTP', 'TELNET'])
+        self.stat_table.setVerticalHeaderLabels(['Ethernet II', 'ARP', 'IP', 'TCP', 'UDP', 'ICMP', 'HTTP', 'HTTPS','TELNET', 'TOTAL'])
         self.stat_table.setHorizontalHeaderLabels(['PORT0 INBOUND', 'PORT0 OUTBOUND', 'PORT1 INBOUND', 'PORT1 OUTBOUND'])
 
         # Create a QPlainTextEdit for text output
