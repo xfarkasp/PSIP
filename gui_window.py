@@ -87,11 +87,12 @@ class Ui(QMainWindow):
 
     def on_timer_update_button_clicked(self):
         # Start a separate thread for sniffing packets
-        sniff_thread = threading.Thread(target=self.switch.start_sniffing, args=(0,))
+        sniff_thread = threading.Thread(target=self.switch.start_sniffing)
+        sniff_thread.daemon = True
         sniff_thread.start()
 
-        sniff_thread2 = threading.Thread(target=self.switch.start_sniffing, args=(1,))
-        sniff_thread2.start()
+        # sniff_thread2 = threading.Thread(target=self.switch.start_sniffing, args=(1,))
+        # sniff_thread2.start()
 
     def initUI(self):
         # WIDGETS

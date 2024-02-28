@@ -41,14 +41,9 @@ class Switch(QObject):
         self.last_packet_1 = None
 
 
-    def start_sniffing(self, enum_int):
-        callback_with_extra_arg = lambda packet: self.packet_callback(packet, enum_int)
-        interface = ""
-        if enum_int == 0:
-            interface = self._port0_device
-        if enum_int == 1:
-            interface = self._port1_device
-        sniff(prn=callback_with_extra_arg, store=0,iface=interface)
+    def start_sniffing(self):
+
+        sniff(iface=[self._port0_device, self._port1_device] ,prn=self.packet_callback, store=0)
 
     @property
     def packet_timeout(self):
@@ -159,14 +154,7 @@ class Switch(QObject):
             self.stat_value_changed.emit(col, local_list)
 
 
-    def packet_callback(self, packet, enum_int):
-
-        desired_int = ""
-        if enum_int == 0:
-            desired_int = self._port0_device
-        elif enum_int == 1:
-            desired_int = self._port1_device
-
+    def packet_callback(self, packet):
 
         if packet.haslayer("Ethernet"):
             src_mac = packet["Ethernet"].src
@@ -174,37 +162,31 @@ class Switch(QObject):
             type = packet["Ethernet"].fields["type"]
             interface = packet.sniffed_on
 
-            # if dst_mac == get_if_hwaddr(interface) or src_mac == get_if_hwaddr(interface):
-            #     return
             #print(interface)
-            # print(f"Received frame from {src_mac} to {dst_mac} type {type}")
+            print(f"Received frame from {src_mac} to {dst_mac} type {type}")
             self.log_value = f"Received frame from {src_mac} to {dst_mac} type {type}"
 
-            if enum_int == 0:
-                if desired_int == self.port0_device and packet.dst != self.port1_address and packet.src != self.port1_address:
-                    if interface == desired_int:
-                        self.port0_address = src_mac
-                        self.port0_timer = self._packet_timeout
-                        self.stat_handler(0, packet)
+            if interface == self.port0_device and packet.dst != self.port1_address and packet.src != self.port1_address:
+                    self.port0_address = src_mac
+                    self.port0_timer = self._packet_timeout
+                    self.stat_handler(0, packet)
 
-                        #if self.last_packet_1 != packet:
-                        print("poslal som 0")
-                        sendp(packet, iface=self._port1_device)
-                        self.stat_handler(3, packet)
-                        self.last_packet_0 = packet
+                    #if self.last_packet_1 != packet:
+                    print("poslal som 0")
+                    sendp(packet, iface=self._port1_device)
+                    self.stat_handler(3, packet)
+                    self.last_packet_0 = packet
 
-            if enum_int == 1:
-                if desired_int == self.port1_device and packet.dst != self.port0_address and packet.src != self.port0_address:
-                    if interface == desired_int:
-                        self.port1_address = src_mac
-                        #self.port1_timer = self._packet_timeout
-                        self.stat_handler(2, packet)
+            if interface == self.port1_device and packet.dst != self.port0_address and packet.src != self.port0_address:
+                    self.port1_address = src_mac
+                    #self.port1_timer = self._packet_timeout
+                    self.stat_handler(2, packet)
 
-                        #if self.last_packet_0 != packet:
-                        print("poslal som 1")
-                        sendp(packet, iface=self._port0_device)
-                        self.stat_handler(1, packet)
-                        self.last_packet_1 = packet
+                    #if self.last_packet_0 != packet:
+                    print("poslal som 1")
+                    sendp(packet, iface=self._port0_device)
+                    self.stat_handler(1, packet)
+                    self.last_packet_1 = packet
 
     def remove_device(self):
         self.port0_address = ""
