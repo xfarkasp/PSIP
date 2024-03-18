@@ -33,7 +33,8 @@ class Ui(QMainWindow):
 
         # Connect the custom signal to a slot (method) in the GUI class
         self.switch.log_value_changed.connect(self.add_text)
-        self.switch.port0_changed.connect(self.update_port_0)
+        # old logic: self.switch.port0_changed.connect(self.update_port_0)
+        self.switch.port_changed.connect(lambda: self.populate_lists())
         self.switch.stat_value_changed.connect(self.update_stat)
 
         self.initUI()
@@ -56,25 +57,27 @@ class Ui(QMainWindow):
         separator_item.setBackground(QColor(0, 0, 0))  # Set background color
         list_widget.addItem(separator_item)
 
+    @pyqtSlot()
     def populate_lists(self):
-        # Dummy data, you can replace this with your actual data
-        port_data = {
-            "Port 1": [("AA:BB:CC:DD:EE:FF", "00:00:20"), ("12:34:56:78:90:AB", "00:01:30")],
-            "Port 2": [("FF:EE:DD:CC:BB:AA", "00:02:45"), ("AB:90:78:56:34:12", "00:03:15")]
-        }
+        # Clear existing items in the list widgets
+        try:
+            self.port1_widget.clear()
+            self.port2_widget.clear()
+            for port, mac_timer_dict in self.switch.mac_addresses.items():
+                if port == "port1":
+                    list_widget = self.port1_widget
+                else:
+                    list_widget = self.port2_widget
 
-        for port, macs in port_data.items():
-            if port == "Port 1":
-                list_widget = self.port1_widget
-            else:
-                list_widget = self.port2_widget
+                # Add column identifiers
+                list_widget.addItem("MAC\t\tTimer")
+                self.add_separator(list_widget)
 
-            # Add column identifiers
-            list_widget.addItem("MAC\t\tTimer")
-            self.add_separator(list_widget)
-            for mac, timer in macs:
-                item = QListWidgetItem(f"{mac}\t{timer}")
-                list_widget.addItem(item)
+                for mac, timer in mac_timer_dict.items():
+                    item = QListWidgetItem(f"{mac}\t{timer}")
+                    list_widget.addItem(item)
+        except Exception as e:
+            print(f"Error occurred while adding MAC address: {e}")
 
     @pyqtSlot(str)
     def add_text(self, text):
@@ -104,14 +107,14 @@ class Ui(QMainWindow):
         self.timer.stop()
 
     def timer_callback(self):
-        timer_value = self.switch.port0_timer
-        if timer_value > 0 and len(self.switch.port0_address) != 0:
-            timer_value -= 1
-            self.switch.port0_timer = timer_value
-            self.mac_table.setItem(0, 1, QTableWidgetItem(str(self.switch.port0_timer)))
-            if timer_value == 0:
-                print("time 0")
-                self.switch.remove_device()
+        # timer_value = self.switch.port0_timer
+        # if timer_value > 0 and len(self.switch.port0_address) != 0:
+        #     timer_value -= 1
+        #     self.switch.port0_timer = timer_value
+        #     self.mac_table.setItem(0, 1, QTableWidgetItem(str(self.switch.port0_timer)))
+        #     if timer_value == 0:
+        #         print("time 0")
+        #         self.switch.remove_device()
 
     def on_port0_combo_box_changed(self, index):
         selected_text = self.port0_combo_box.currentText()
@@ -146,7 +149,6 @@ class Ui(QMainWindow):
         # Add the QVBoxLayouts to the main QHBoxLayout
         layoutMac.addLayout(port1_layout)
         layoutMac.addLayout(port2_layout)
-        self.populate_lists()
 
         self.stat_table.setRowCount(10)
         self.stat_table.setColumnCount(4)

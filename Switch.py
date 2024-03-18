@@ -11,10 +11,12 @@ from scapy.layers.http import HTTPRequest
 from scapy.sendrecv import sendp
 
 BC_MAC = "FF:FF:FF:FF:FF:FF"
+
+
 class Switch(QObject):
     # signals
-    port0_changed = pyqtSignal(str)
-    port1_changed = pyqtSignal(str)
+    port_changed = pyqtSignal()
+    port1_changed = pyqtSignal()
     log_value_changed = pyqtSignal(str)
     stat_value_changed = pyqtSignal(int, list)
 
@@ -23,6 +25,11 @@ class Switch(QObject):
         self._packet_timeout = 30  # Timeout for MAC address entries in seconds
         self._port0_address = ""
         self._port1_address = ""
+
+        self.mac_addresses = {
+            "port1": {},
+            "port2": {}
+        }
 
         self._port0_device = ""
         self._port1_device = ""
@@ -40,14 +47,14 @@ class Switch(QObject):
         self.last_packet_0 = None
         self.last_packet_1 = None
 
-
     def start_sniffing(self):
 
-        sniff(iface=[self._port0_device, self._port1_device] ,prn=self.packet_callback, store=0)
+        sniff(iface=[self._port0_device, self._port1_device], prn=self.packet_callback, store=0)
 
     @property
     def packet_timeout(self):
         return self._packet_timeout
+
     @property
     def port0_address(self):
         return self._port0_address
@@ -80,12 +87,12 @@ class Switch(QObject):
     @port0_address.setter
     def port0_address(self, new_value):
         self._port0_address = new_value
-        self.port0_changed.emit(new_value)
+        #self.port_changed.emit(new_value)
 
     @port1_address.setter
     def port1_address(self, new_value):
         self._port1_address = new_value
-        self.port1_changed.emit(new_value)
+        #self.port_changed.emit(new_value)
 
     @port0_device.setter
     def port0_device(self, new_value):
@@ -103,6 +110,22 @@ class Switch(QObject):
     @port0_timer.setter
     def port0_timer(self, new_value):
         self._port0_timer = new_value
+
+    def add_mac_address(self, port, mac_address, timer_value):
+        self.mac_addresses[port][mac_address] = timer_value
+        self.port_changed.emit()
+
+    def remove_mac_address(self, port, mac_address):
+        if mac_address in self.mac_addresses[port]:
+            del self.mac_addresses[port][mac_address]
+        else:
+            print(f"The MAC address {mac_address} does not exist in {port}.")
+
+    def update_timer(self, port, mac_address, new_timer_value):
+        if mac_address in self.mac_addresses[port]:
+            self.mac_addresses[port][mac_address] = new_timer_value
+        else:
+            print(f"The MAC address {mac_address} does not exist in {port}.")
 
     def stat_handler(self, col, packet):
         local_list = []
@@ -153,41 +176,41 @@ class Switch(QObject):
             local_list[9] = local_list[9] + 1
             self.stat_value_changed.emit(col, local_list)
 
-
     def packet_callback(self, packet):
         try:
             src_mac = packet[Ether].src
             dst_mac = packet[Ether].dst
             interface = packet.sniffed_on
 
-            #print(interface)
-            print(f"Received frame from {src_mac} to {dst_mac} type {type}")
-            self.log_value = f"Received frame from {src_mac} to {dst_mac} type {type}"
+            # print(interface)
+            print(f"Received frame from {src_mac} to {dst_mac}")
+            self.log_value = f"Received frame from {src_mac} to {dst_mac}"
 
-            if interface == self.port0_device and packet.dst != self.port1_address and packet.src != self.port1_address:
-                    self.port0_address = src_mac
-                    self.port0_timer = self._packet_timeout
-                    self.stat_handler(0, packet)
+            if interface == self.port0_device:
+                self.add_mac_address('port1', src_mac, self._packet_timeout)
+                self.port0_address = src_mac
+                self.port0_timer = self._packet_timeout
+                self.stat_handler(0, packet)
 
-                    #if self.last_packet_1 != packet:
-                    print("poslal som 0")
-                    sendp(packet, iface=self._port1_device)
-                    self.stat_handler(3, packet)
-                    self.last_packet_0 = packet
+                # if self.last_packet_1 != packet:
+                print("poslal som 0")
+                #sendp(packet, iface=self._port1_device)
+                self.stat_handler(3, packet)
+                self.last_packet_0 = packet
 
             if interface == self.port1_device:
-                    self.port1_address = src_mac
-                    #self.port1_timer = self._packet_timeout
-                    self.stat_handler(2, packet)
+                self.add_mac_address('port2', src_mac, self._packet_timeout)
+                self.port1_address = src_mac
+                # self.port1_timer = self._packet_timeout
+                self.stat_handler(2, packet)
 
-                    #if self.last_packet_0 != packet:
-                    print("poslal som 1")
-                    sendp(packet, iface=self._port0_device)
-                    self.stat_handler(1, packet)
-                    self.last_packet_1 = packet
-        except any:
-            print("kokot pica u holica")
-
+                # if self.last_packet_0 != packet:
+                print("poslal som 1")
+                #sendp(packet, iface=self._port0_device)
+                self.stat_handler(1, packet)
+                self.last_packet_1 = packet
+        except Exception as e:
+            print(f"Error occurred while adding MAC address: {e}")
 
     def remove_device(self):
         self.port0_address = ""
