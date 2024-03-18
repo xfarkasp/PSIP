@@ -15,7 +15,15 @@ class Ui(QMainWindow):
         super().__init__()
         self.output_text = QPlainTextEdit(self)
         self.timer_input_field = QPlainTextEdit(self)
-        self.timer_update_button = QPushButton('Start', self)
+
+        self.timer_update_button = QPushButton('Set', self)
+        self.start_sniffing = QPushButton('Start sniffing', self)
+        self.stop_sniffing = QPushButton('Stop sniffing', self)
+        self.clear_table = QPushButton('Clear table', self)
+        self.clear_port1 = QPushButton('Clear port1', self)
+        self.clear_port2 = QPushButton('Clear port2', self)
+        self.clear_stats = QPushButton('Clear stats', self)
+
         self.port1_widget = QListWidget()
         self.port2_widget = QListWidget()
         self.stat_table = QTableWidget(self)
@@ -23,10 +31,16 @@ class Ui(QMainWindow):
         self.port0_combo_box = QComboBox(self)
         self.port1_combo_box = QComboBox(self)
 
+        self.port0_combo_box.setMaximumSize(220, 50)
+        self.port1_combo_box.setMaximumSize(220, 50)
+
         self.port0_combo_box.currentIndexChanged.connect(lambda index: self.on_port0_combo_box_changed(index))
         self.port1_combo_box.currentIndexChanged.connect(lambda index: self.on_port1_combo_box_changed(index))
 
         self.timer_update_button.clicked.connect(lambda: self.on_timer_update_button_clicked())
+        self.start_sniffing.clicked.connect(lambda: self.on_start_sniffing_button_clicked())
+
+        self.stop_sniffing.clicked.connect(lambda: self.on_stop_sniffing_button_clicked())
 
         # Create an instance of the logic class
         self.switch = Switch()
@@ -124,6 +138,7 @@ class Ui(QMainWindow):
 
         except Exception as e:
             print(f"Error in timer_callback: {e}")
+
     def on_port0_combo_box_changed(self, index):
         selected_text = self.port0_combo_box.currentText()
         self.switch.port0_device = selected_text
@@ -134,12 +149,27 @@ class Ui(QMainWindow):
 
     def on_timer_update_button_clicked(self):
         # Start a separate thread for sniffing packets
+        print("timer update")
+        # sniff_thread = threading.Thread(target=self.switch.start_sniffing)
+        # sniff_thread.daemon = True
+        # sniff_thread.start()
+
+    def on_start_sniffing_button_clicked(self):
+        self.switch.sniffing_on = False
         sniff_thread = threading.Thread(target=self.switch.start_sniffing)
         sniff_thread.daemon = True
         sniff_thread.start()
 
-        # sniff_thread2 = threading.Thread(target=self.switch.start_sniffing, args=(1,))
-        # sniff_thread2.start()
+    def on_stop_sniffing_button_clicked(self):
+        # Create a lock
+        sniffing_on_lock = threading.Lock()
+        sniffing_on_lock.acquire()
+        try:
+            # Access/modify shared resource
+            self.switch.sniffing_on = True
+        finally:
+            # Release the lock to allow other threads to acquire it
+            sniffing_on_lock.release()
 
     def initUI(self):
         # WIDGETS
@@ -160,8 +190,10 @@ class Ui(QMainWindow):
 
         self.stat_table.setRowCount(10)
         self.stat_table.setColumnCount(4)
-        self.stat_table.setVerticalHeaderLabels(['Ethernet II', 'ARP', 'IP', 'TCP', 'UDP', 'ICMP', 'HTTP', 'HTTPS','TELNET', 'TOTAL'])
-        self.stat_table.setHorizontalHeaderLabels(['PORT0 INBOUND', 'PORT0 OUTBOUND', 'PORT1 INBOUND', 'PORT1 OUTBOUND'])
+        self.stat_table.setVerticalHeaderLabels(
+            ['Ethernet II', 'ARP', 'IP', 'TCP', 'UDP', 'ICMP', 'HTTP', 'HTTPS', 'TELNET', 'TOTAL'])
+        self.stat_table.setHorizontalHeaderLabels(
+            ['PORT0 INBOUND', 'PORT0 OUTBOUND', 'PORT1 INBOUND', 'PORT1 OUTBOUND'])
 
         # Create a QPlainTextEdit for text output
         thread_id = threading.current_thread().ident
@@ -183,18 +215,38 @@ class Ui(QMainWindow):
         delay_update_layout = QHBoxLayout()
         mac_layout = QHBoxLayout()
         port_select_layout = QVBoxLayout()
+        sniffing_layout = QHBoxLayout()
+        clear_all_layout = QHBoxLayout()
+        clear_ports_layout = QHBoxLayout()
+        input_layout = QVBoxLayout()
 
         self.timer_input_field.setMaximumHeight(30)
         self.timer_input_field.setMaximumWidth(100)
-        delay_update_layout.addWidget(self.timer_input_field)
-        delay_update_layout.addWidget(self.timer_update_button)
-
+        # combo boxes
         port_select_layout.addWidget(self.port0_combo_box)
         port_select_layout.addWidget(self.port1_combo_box)
-        port_select_layout.addLayout(delay_update_layout)
+        # sniffing buttons
+        sniffing_layout.addWidget(self.start_sniffing)
+        sniffing_layout.addWidget(self.stop_sniffing)
+        # delay input and button
+        delay_update_layout.addWidget(self.timer_input_field)
+        delay_update_layout.addWidget(self.timer_update_button)
+        # clear stats and mac table buttons
+        clear_all_layout.addWidget(self.clear_table)
+        clear_all_layout.addWidget(self.clear_stats)
+        # clear specific port mac tables
+        clear_ports_layout.addWidget(self.clear_port1)
+        clear_ports_layout.addWidget(self.clear_port2)
+
+        # create the input layout
+        input_layout.addLayout(port_select_layout)
+        input_layout.addLayout(sniffing_layout)
+        input_layout.addLayout(delay_update_layout)
+        input_layout.addLayout(clear_all_layout)
+        input_layout.addLayout(clear_ports_layout)
 
         mac_layout.addLayout(layoutMac)
-        mac_layout.addLayout(port_select_layout)
+        mac_layout.addLayout(input_layout)
 
         table_layout.addLayout(mac_layout)
         table_layout.addWidget(self.stat_table)
@@ -211,6 +263,7 @@ class Ui(QMainWindow):
 
         self.setWindowTitle('The Switcher')
 
+
 def main():
     app = QApplication(sys.argv)
     ex = Ui()
@@ -218,89 +271,6 @@ def main():
     ex.show()
     sys.exit(app.exec_())
 
+
 if __name__ == '__main__':
     main()
-
-# import sys
-# from PyQt5.QtCore import Qt, QSize
-# from PyQt5.QtGui import QColor, QFont
-# from PyQt5.QtWidgets import QApplication, QMainWindow, QHBoxLayout, QVBoxLayout, QWidget, QListWidget, QListWidgetItem, QLabel
-#
-# class MainWindow(QMainWindow):
-#     def __init__(self):
-#         super().__init__()
-#
-#         self.setWindowTitle("MAC Table")
-#
-#         self.central_widget = QWidget()
-#         self.setCentralWidget(self.central_widget)
-#
-#
-#         self.central_widget.setLayout(self.layoutMac)
-#
-#         self.layoutMac = QHBoxLayout()  # Horizontal layout
-#         # Create a QVBoxLayout for each port
-#         self.port1_layout = QVBoxLayout()
-#         self.port2_layout = QVBoxLayout()
-#
-#         self.port1_widget = QListWidget()
-#         self.port1_layout.addWidget(self.create_port_label("Port 1"))  # Add port name label
-#         self.port1_layout.addWidget(self.port1_widget)
-#
-#         self.port2_widget = QListWidget()
-#         self.port2_layout.addWidget(self.create_port_label("Port 2"))  # Add port name label
-#         self.port2_layout.addWidget(self.port2_widget)
-#
-#         # Add the QVBoxLayouts to the main QHBoxLayout
-#         self.layoutMac.addLayout(self.port1_layout)
-#         self.layoutMac.addLayout(self.port2_layout)
-#
-#         self.populate_lists()
-#
-#     def create_port_label(self, text):
-#         label = QLabel(text)
-#         label.setAlignment(Qt.AlignCenter)
-#         label.setFont(QFont("Arial", 14, QFont.Bold))
-#         return label
-#
-#     def add_separator(self, list_widget):
-#         separator_item = QListWidgetItem()
-#         separator_item.setFlags(separator_item.flags() & ~Qt.ItemIsSelectable)  # Disable selection
-#         separator_item.setSizeHint(QSize(1, 10))  # Set size
-#         separator_item.setBackground(QColor(0, 0, 0))  # Set background color
-#         list_widget.addItem(separator_item)
-#
-#     def populate_lists(self):
-#         # Dummy data, you can replace this with your actual data
-#         port_data = {
-#             "Port 1": [("AA:BB:CC:DD:EE:FF", "00:00:20"), ("12:34:56:78:90:AB", "00:01:30")],
-#             "Port 2": [("FF:EE:DD:CC:BB:AA", "00:02:45"), ("AB:90:78:56:34:12", "00:03:15")]
-#         }
-#
-#         for port, macs in port_data.items():
-#             if port == "Port 1":
-#                 list_widget = self.port1_widget
-#             else:
-#                 list_widget = self.port2_widget
-#
-#             # Add column identifiers
-#             list_widget.addItem("MAC\t\tTimer")
-#             self.add_separator(list_widget)
-#             for mac, timer in macs:
-#                 item = QListWidgetItem(f"{mac}\t{timer}")
-#                 list_widget.addItem(item)
-#
-# if __name__ == "__main__":
-#     app = QApplication(sys.argv)
-#     window = MainWindow()
-#     window.setGeometry(100, 100, 600, 300)
-#     window.show()
-#     sys.exit(app.exec_())
-
-
-
-
-
-
-
-

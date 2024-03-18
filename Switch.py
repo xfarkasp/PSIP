@@ -22,6 +22,8 @@ class Switch(QObject):
 
     def __init__(self):
         super().__init__()  # Call the superclass __init__ method
+        self.sniffing_on = True
+
         self._packet_timeout = 30  # Timeout for MAC address entries in seconds
         self._port0_address = ""
         self._port1_address = ""
@@ -48,8 +50,11 @@ class Switch(QObject):
         self.last_packet_1 = None
 
     def start_sniffing(self):
+        try:
+            sniff(iface=[self._port0_device, self._port1_device], prn=self.packet_callback, store=0, stop_filter=lambda stop: self.sniffing_on)
 
-        sniff(iface=[self._port0_device, self._port1_device], prn=self.packet_callback, store=0)
+        except Exception as e:
+            print("An error occurred during packet sniffing:", e)
 
     @property
     def packet_timeout(self):
