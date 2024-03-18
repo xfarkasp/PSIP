@@ -107,15 +107,23 @@ class Ui(QMainWindow):
         self.timer.stop()
 
     def timer_callback(self):
-        # timer_value = self.switch.port0_timer
-        # if timer_value > 0 and len(self.switch.port0_address) != 0:
-        #     timer_value -= 1
-        #     self.switch.port0_timer = timer_value
-        #     self.mac_table.setItem(0, 1, QTableWidgetItem(str(self.switch.port0_timer)))
-        #     if timer_value == 0:
-        #         print("time 0")
-        #         self.switch.remove_device()
+        try:
+            for port, mac_timer_dict in self.switch.mac_addresses.items():
+                macs_to_remove = []
+                for mac, timer in mac_timer_dict.items():
+                    self.switch.mac_addresses[port][mac] -= 1
 
+                    if self.switch.mac_addresses[port][mac] <= 0:
+                        macs_to_remove.append(mac)
+
+                for mac in macs_to_remove:
+                    self.switch.mac_addresses[port].pop(mac)
+
+            if self.switch.mac_addresses:
+                self.populate_lists()
+
+        except Exception as e:
+            print(f"Error in timer_callback: {e}")
     def on_port0_combo_box_changed(self, index):
         selected_text = self.port0_combo_box.currentText()
         self.switch.port0_device = selected_text
