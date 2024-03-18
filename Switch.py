@@ -112,20 +112,28 @@ class Switch(QObject):
         self._port0_timer = new_value
 
     def add_mac_address(self, port, mac_address, timer_value):
+        self.duplicity_check(mac_address, port)
         self.mac_addresses[port][mac_address] = timer_value
         self.port_changed.emit()
 
-    def remove_mac_address(self, port, mac_address):
-        if mac_address in self.mac_addresses[port]:
-            del self.mac_addresses[port][mac_address]
-        else:
-            print(f"The MAC address {mac_address} does not exist in {port}.")
+    def duplicity_check(self, addr, port):
+        # Check if the port is valid
+        if port not in self.mac_addresses:
+            print(f"Port '{port}' is not valid.")
+            return
 
-    def update_timer(self, port, mac_address, new_timer_value):
-        if mac_address in self.mac_addresses[port]:
-            self.mac_addresses[port][mac_address] = new_timer_value
+        # Get the other port
+        other_port = "port2" if port == "port1" else "port1"
+
+        # Check if the MAC address exists on the other port
+        if addr in self.mac_addresses[other_port]:
+            # Remove the MAC address from the other port
+            del self.mac_addresses[other_port][addr]
+            print(f"MAC address '{addr}' removed from '{other_port}'.")
+            self.port_changed.emit()
+
         else:
-            print(f"The MAC address {mac_address} does not exist in {port}.")
+            print(f"MAC address '{addr}' not found on '{other_port}'.")
 
     def stat_handler(self, col, packet):
         local_list = []
@@ -212,8 +220,6 @@ class Switch(QObject):
         except Exception as e:
             print(f"Error occurred while adding MAC address: {e}")
 
-    def remove_device(self):
-        self.port0_address = ""
 
     def get_active_interfaces(self):
         # active_interfaces = get_if_list()
