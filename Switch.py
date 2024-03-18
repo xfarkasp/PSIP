@@ -155,11 +155,9 @@ class Switch(QObject):
 
 
     def packet_callback(self, packet):
-
-        if packet.haslayer("Ethernet"):
-            src_mac = packet["Ethernet"].src
-            dst_mac = packet["Ethernet"].dst
-            type = packet["Ethernet"].fields["type"]
+        try:
+            src_mac = packet[Ether].src
+            dst_mac = packet[Ether].dst
             interface = packet.sniffed_on
 
             #print(interface)
@@ -187,6 +185,9 @@ class Switch(QObject):
                     sendp(packet, iface=self._port0_device)
                     self.stat_handler(1, packet)
                     self.last_packet_1 = packet
+        except any:
+            print("kokot pica u holica")
+
 
     def remove_device(self):
         self.port0_address = ""
