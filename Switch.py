@@ -175,7 +175,7 @@ class Switch(QObject):
                     self.stat_handler(3, packet)
                     self.last_packet_0 = packet
 
-            if interface == self.port1_device and packet.dst != self.port0_address and packet.src != self.port0_address:
+            if interface == self.port1_device:
                     self.port1_address = src_mac
                     #self.port1_timer = self._packet_timeout
                     self.stat_handler(2, packet)
