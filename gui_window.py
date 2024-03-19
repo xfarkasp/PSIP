@@ -5,7 +5,7 @@ from PyQt5.QtCore import QTimer, pyqtSlot, Qt, QSize
 from PyQt5.QtGui import QColor, QFont
 from PyQt5.QtWidgets import QApplication, QMainWindow, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget, \
     QPlainTextEdit, QSizePolicy, QLabel, QHBoxLayout, QHeaderView, QPushButton, QComboBox, QScrollBar, QListWidgetItem, \
-    QListWidget
+    QListWidget, QMessageBox
 
 from Switch import Switch
 
@@ -13,6 +13,7 @@ from Switch import Switch
 class Ui(QMainWindow):
     def __init__(self):
         super().__init__()
+
         self.output_text = QPlainTextEdit(self)
         self.timer_input_field = QPlainTextEdit(self)
 
@@ -148,11 +149,27 @@ class Ui(QMainWindow):
         self.switch.port1_device = selected_text
 
     def on_timer_update_button_clicked(self):
-        # Start a separate thread for sniffing packets
-        print("timer update")
-        # sniff_thread = threading.Thread(target=self.switch.start_sniffing)
-        # sniff_thread.daemon = True
-        # sniff_thread.start()
+        try:
+            text = self.timer_input_field.toPlainText()
+            if text.isdigit():
+                number = int(text)
+                # save old timer
+                old_timer_value = self.switch.packet_timeout
+                # set the global timer value
+                self.switch.packet_timeout = number
+                # compare if old timer value was greater than new to remove outdated entries
+                if old_timer_value > number:
+                    for port, mac_timer_dict in self.switch.mac_addresses.items():
+                        for mac, timer in mac_timer_dict.items():
+                            if self.switch.mac_addresses[port][mac] >= self.switch.packet_timeout:
+                                self.switch.mac_addresses[port][mac] = 0
+
+            else:
+                QMessageBox.warning(self, 'Non-Numeric Input', 'Please enter a numeric value.')
+        except Exception as e:
+            #QMessageBox.warning(self, 'ERROR: ', e)
+            print(e)
+
 
     def on_start_sniffing_button_clicked(self):
         self.switch.sniffing_on = False
