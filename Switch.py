@@ -1,3 +1,5 @@
+import queue
+
 import psutil
 from scapy.all import sniff
 import time
@@ -48,6 +50,8 @@ class Switch(QObject):
 
         self.last_packet_0 = None
         self.last_packet_1 = None
+
+        self.sent_frame_que = queue.Queue()
 
     def start_sniffing(self):
         try:
@@ -189,39 +193,56 @@ class Switch(QObject):
             local_list[9] = local_list[9] + 1
             self.stat_value_changed.emit(col, local_list)
 
+    def get_port_on(self, dest_mac):
+        if dest_mac != BC_MAC:
+            for port, mac_dict in self.mac_addresses.items():
+                for mac in mac_dict.items():
+                    if mac == dest_mac:
+                        return port
+        return 'BC'
+
     def packet_callback(self, packet):
         try:
-            src_mac = packet[Ether].src
-            dst_mac = packet[Ether].dst
-            interface = packet.sniffed_on
+            if Ether in packet:
+                src_mac = packet[Ether].src
+                dst_mac = packet[Ether].dst
+                interface = packet.sniffed_on
 
-            # print(interface)
-            print(f"Received frame from {src_mac} to {dst_mac}")
-            self.log_value = f"Received frame from {src_mac} to {dst_mac}"
+                # print(interface)
+                print(f"Received frame from {src_mac} to {dst_mac}")
+                self.log_value = f"Received frame from {src_mac} to {dst_mac}"
 
-            if interface == self.port0_device:
-                self.add_mac_address('port1', src_mac, self._packet_timeout)
-                self.port0_address = src_mac
-                self.port0_timer = self._packet_timeout
-                self.stat_handler(0, packet)
+                if interface == self.port0_device:
+                    if packet not in self.sent_frame_que.queue:
+                        self.add_mac_address('port1', src_mac, self._packet_timeout)
+                    self.stat_handler(0, packet)
 
-                # if self.last_packet_1 != packet:
-                print("poslal som 0")
-                #sendp(packet, iface=self._port1_device)
-                self.stat_handler(3, packet)
-                self.last_packet_0 = packet
+                    if packet not in self.sent_frame_que.queue:
+                        port_to_send = self.get_port_on(dst_mac)
+                        if port_to_send == 'port2' or port_to_send == 'BC':
+                            sendp(packet, iface=self._port1_device)
+                            print("sent to port 2")
+                            self.stat_handler(3, packet)
+                            self.sent_frame_que.put(packet)
 
-            if interface == self.port1_device:
-                self.add_mac_address('port2', src_mac, self._packet_timeout)
-                self.port1_address = src_mac
-                # self.port1_timer = self._packet_timeout
-                self.stat_handler(2, packet)
+                if interface == self.port1_device:
+                    if packet not in self.sent_frame_que.queue:
+                        self.add_mac_address('port2', src_mac, self._packet_timeout)
+                    self.stat_handler(2, packet)
 
-                # if self.last_packet_0 != packet:
-                print("poslal som 1")
-                #sendp(packet, iface=self._port0_device)
-                self.stat_handler(1, packet)
-                self.last_packet_1 = packet
+                    if packet not in self.sent_frame_que.queue:
+                        port_to_send = self.get_port_on(dst_mac)
+                        if port_to_send == 'port1' or port_to_send == 'BC':
+                            sendp(packet, iface=self._port0_device)
+                            print("sent to port 1")
+                            self.stat_handler(1, packet)
+                            self.sent_frame_que.put(packet)
+
+                if self.sent_frame_que.qsize() == 10:
+                    self.sent_frame_que.get_nowait()
+                    print("que size:")
+                    print(self.sent_frame_que.qsize())
+
         except Exception as e:
             print(f"Error occurred while adding MAC address: {e}")
 
