@@ -195,15 +195,6 @@ class Switch(QObject):
 
     def packet_callback(self, packet):
         try:
-
-            if ARP in packet:
-                arp_layer = packet[ARP]
-                if arp_layer.op == 1:
-                    print("ARP Request:")
-                elif arp_layer.op == 2:
-                    print("ARP Reply:")
-                else:
-                    print("Unknown ARP operation code:", arp_layer.op)
             if Ether in packet:
                 # Check if the packet was sent by your program (using the same interface)
                 src_mac = packet[Ether].src
@@ -223,9 +214,6 @@ class Switch(QObject):
                     # Add hash to the set
                     self.unique_packet_hashes.add(packet_hash)
 
-                    if ARP in packet:
-                        print("arp it is")
-                    # print(interface)
                     print(f"Received frame from {src_mac} to {dst_mac}")
                     self.log_value = f"Received frame from {src_mac} to {dst_mac}"
 
