@@ -1,3 +1,4 @@
+import hashlib
 import queue
 
 import psutil
@@ -27,19 +28,11 @@ class Switch(QObject):
         self.sniffing_on = True
 
         self._packet_timeout = 30  # Timeout for MAC address entries in seconds
-        self._port0_address = ""
-        self._port1_address = ""
 
         self.mac_addresses = {
             "port1": {},
             "port2": {}
         }
-
-        self._port0_device = ""
-        self._port1_device = ""
-
-        self._port0_timer = self._packet_timeout
-        self._port1_timer = self._packet_timeout
 
         self._log_value = ""
 
@@ -48,14 +41,13 @@ class Switch(QObject):
         self._por1_stats_in = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         self._por1_stats_out = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
-        self.last_packet_0 = None
-        self.last_packet_1 = None
-
         self.sent_frame_que = queue.Queue()
+
+        self.unique_packet_hashes = set()
 
     def start_sniffing(self):
         try:
-            sniff(iface=[self._port0_device, self._port1_device], prn=self.packet_callback, store=0, stop_filter=lambda stop: self.sniffing_on)
+            sniff(iface=[self._port0_device, self._port1_device], prn=self.packet_callback, store=0)
 
         except Exception as e:
             print("An error occurred during packet sniffing:", e)
@@ -203,45 +195,61 @@ class Switch(QObject):
 
     def packet_callback(self, packet):
         try:
+
+            if ARP in packet:
+                arp_layer = packet[ARP]
+                if arp_layer.op == 1:
+                    print("ARP Request:")
+                elif arp_layer.op == 2:
+                    print("ARP Reply:")
+                else:
+                    print("Unknown ARP operation code:", arp_layer.op)
             if Ether in packet:
+                # Check if the packet was sent by your program (using the same interface)
                 src_mac = packet[Ether].src
                 dst_mac = packet[Ether].dst
+                if src_mac == dst_mac:
+                    return
                 interface = packet.sniffed_on
+                if src_mac == get_if_hwaddr(interface):
+                    print("Packet sent by the program, skipping processing.")
+                    return
 
-                # print(interface)
-                print(f"Received frame from {src_mac} to {dst_mac}")
-                self.log_value = f"Received frame from {src_mac} to {dst_mac}"
+                # Calculate hash from packet data
+                packet_hash = hashlib.sha256(bytes(packet)).hexdigest()
 
-                if interface == self.port0_device:
-                    if packet not in self.sent_frame_que.queue:
+                # Check if packet hash is already in the set
+                if packet_hash not in self.unique_packet_hashes:
+                    # Add hash to the set
+                    self.unique_packet_hashes.add(packet_hash)
+
+                    if ARP in packet:
+                        print("arp it is")
+                    # print(interface)
+                    print(f"Received frame from {src_mac} to {dst_mac}")
+                    self.log_value = f"Received frame from {src_mac} to {dst_mac}"
+
+                    if interface == self.port0_device:
                         self.add_mac_address('port1', src_mac, self._packet_timeout)
-                    self.stat_handler(0, packet)
-
-                    if packet not in self.sent_frame_que.queue:
+                        self.stat_handler(0, packet)
                         port_to_send = self.get_port_on(dst_mac)
                         if port_to_send == 'port2' or port_to_send == 'BC':
                             sendp(packet, iface=self._port1_device)
                             print("sent to port 2")
                             self.stat_handler(3, packet)
-                            self.sent_frame_que.put(packet)
 
-                if interface == self.port1_device:
-                    if packet not in self.sent_frame_que.queue:
+                    if interface == self.port1_device:
                         self.add_mac_address('port2', src_mac, self._packet_timeout)
-                    self.stat_handler(2, packet)
-
-                    if packet not in self.sent_frame_que.queue:
+                        self.stat_handler(2, packet)
                         port_to_send = self.get_port_on(dst_mac)
                         if port_to_send == 'port1' or port_to_send == 'BC':
                             sendp(packet, iface=self._port0_device)
                             print("sent to port 1")
                             self.stat_handler(1, packet)
-                            self.sent_frame_que.put(packet)
 
-                if self.sent_frame_que.qsize() == 10:
-                    self.sent_frame_que.get_nowait()
-                    print("que size:")
-                    print(self.sent_frame_que.qsize())
+                else:
+                    print("packet was already processed")
+                    self.unique_packet_hashes.remove(packet_hash)
 
         except Exception as e:
             print(f"Error occurred while adding MAC address: {e}")
