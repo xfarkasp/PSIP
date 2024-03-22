@@ -47,9 +47,12 @@ class Switch(QObject):
 
         self.unique_packet_hashes = set()
 
+    def stop_sniffing(self, packet):
+        return self.sniffing_on
+
     def start_sniffing(self):
         try:
-            sniff(iface=[self._port0_device, self._port1_device], prn=self.packet_callback, store=0)
+            sniff(iface=[self._port0_device, self._port1_device], prn=self.packet_callback, store=0, stop_filter=self.stop_sniffing)
 
         except Exception as e:
             print("An error occurred during packet sniffing:", e)
