@@ -122,7 +122,7 @@ class Switch(QObject):
     def duplicity_check(self, addr, port):
         # Check if the port is valid
         if port not in self.mac_addresses:
-            print(f"Port '{port}' is not valid.")
+            #print(f"Port '{port}' is not valid.")
             return
 
         # Get the other port
@@ -132,11 +132,8 @@ class Switch(QObject):
         if addr in self.mac_addresses[other_port]:
             # Remove the MAC address from the other port
             del self.mac_addresses[other_port][addr]
-            print(f"MAC address '{addr}' removed from '{other_port}'.")
-            self.port_changed.emit()
-
-        else:
-            print(f"MAC address '{addr}' not found on '{other_port}'.")
+            #print(f"MAC address '{addr}' removed from '{other_port}'.")
+            #self.port_changed.emit()
 
     def stat_handler(self, col, packet):
         local_list = []
@@ -210,7 +207,7 @@ class Switch(QObject):
                     return
                 interface = packet.sniffed_on
                 if src_mac == get_if_hwaddr(interface):
-                    print("Packet sent by the program, skipping processing.")
+                    #print("Packet sent by the program, skipping processing.")
                     return
 
                 # Calculate hash from packet data
@@ -221,7 +218,7 @@ class Switch(QObject):
                     # Add hash to the set
                     self.unique_packet_hashes.add(packet_hash)
 
-                    print(f"Received frame from {src_mac} to {dst_mac}")
+                    #print(f"Received frame from {src_mac} to {dst_mac}")
                     self.log_value = f"Received frame from {src_mac} to {dst_mac}"
 
                     if interface == self.port0_device:
@@ -230,7 +227,7 @@ class Switch(QObject):
                         port_to_send = self.get_port_on(dst_mac)
                         if port_to_send == 'port2' or port_to_send == 'BC':
                             sendp(packet, iface=self._port1_device)
-                            print("sent to port 2")
+                            #print("sent to port 2")
                             self.stat_handler(3, packet)
 
                     if interface == self.port1_device:
@@ -239,11 +236,11 @@ class Switch(QObject):
                         port_to_send = self.get_port_on(dst_mac)
                         if port_to_send == 'port1' or port_to_send == 'BC':
                             sendp(packet, iface=self._port0_device)
-                            print("sent to port 1")
+                            #print("sent to port 1")
                             self.stat_handler(1, packet)
 
                 else:
-                    print("packet was already processed")
+                    #print("packet was already processed")
                     self.unique_packet_hashes.remove(packet_hash)
 
         except Exception as e:
@@ -283,11 +280,11 @@ class Switch(QObject):
                 self._pull_out_timer_2 -= 1
 
             if self._pull_out_timer_1 == 0:
-                print(f"interface: {self.port0_device} disconnected")
+                #print(f"interface: {self.port0_device} disconnected")
                 self.mac_addresses['port1'] = {}
-                print(self.mac_addresses)
+                #print(self.mac_addresses)
 
             if self._pull_out_timer_2 == 0:
-                print(f"interface: {self.port1_device} disconnected")
+                #print(f"interface: {self.port1_device} disconnected")
                 self.mac_addresses['port2'] = {}
-                print(self.mac_addresses)
+                #print(self.mac_addresses)
