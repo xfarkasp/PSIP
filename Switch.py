@@ -28,6 +28,8 @@ class Switch(QObject):
         self.sniffing_on = True
 
         self._packet_timeout = 30  # Timeout for MAC address entries in seconds
+        self._pull_out_timer_1 = 7
+        self._pull_out_timer_2 = 7
 
         self.mac_addresses = {
             "port1": {},
@@ -115,7 +117,7 @@ class Switch(QObject):
     def add_mac_address(self, port, mac_address, timer_value):
         self.duplicity_check(mac_address, port)
         self.mac_addresses[port][mac_address] = timer_value
-        self.port_changed.emit()
+        #self.port_changed.emit()
 
     def duplicity_check(self, addr, port):
         # Check if the port is valid
@@ -195,6 +197,11 @@ class Switch(QObject):
 
     def packet_callback(self, packet):
         try:
+            if self.is_interface_connected(self.port0_device) is True:
+                self._pull_out_timer_1 = 7
+            if self.is_interface_connected(self.port1_device) is True:
+                self._pull_out_timer_2 = 7
+
             if Ether in packet:
                 # Check if the packet was sent by your program (using the same interface)
                 src_mac = packet[Ether].src
@@ -252,3 +259,35 @@ class Switch(QObject):
         # Extract and print the interface names
         interface_names = list(interfaces.keys())
         return interface_names
+
+    def is_interface_connected(self, interface_name):
+        try:
+            # Get network interfaces information
+            interfaces = psutil.net_if_stats()
+
+            # Check if the interface exists and is up
+            if interface_name in interfaces and interfaces[interface_name].isup:
+                return True
+            else:
+                return False
+        except Exception as e:
+            print("Error:", e)
+            return False
+
+    def pull_out_method(self):
+        if self.sniffing_on is not True:
+            if self._pull_out_timer_1 >= 0:
+                self._pull_out_timer_1 -= 1
+
+            if self._pull_out_timer_2 >= 0:
+                self._pull_out_timer_2 -= 1
+
+            if self._pull_out_timer_1 == 0:
+                print(f"interface: {self.port0_device} disconnected")
+                self.mac_addresses['port1'] = {}
+                print(self.mac_addresses)
+
+            if self._pull_out_timer_2 == 0:
+                print(f"interface: {self.port1_device} disconnected")
+                self.mac_addresses['port2'] = {}
+                print(self.mac_addresses)

@@ -59,6 +59,10 @@ class Ui(QMainWindow):
         self.timer.timeout.connect(self.timer_callback)
         self.start_timer()
 
+        self.pull_out_timer = QTimer(self)
+        self.pull_out_timer.timeout.connect(self.switch.pull_out_method)
+        self.start_pull_out_timer()
+
     def create_port_label(self, text):
         label = QLabel(text)
         label.setAlignment(Qt.AlignCenter)
@@ -118,11 +122,17 @@ class Ui(QMainWindow):
     def start_timer(self):
         self.timer.start(1000)  # Timer interval in milliseconds (e.g., 1000 ms = 1 second)
 
+    def start_pull_out_timer(self):
+        self.pull_out_timer.start(1000)  # Timer interval in milliseconds (e.g., 1000 ms = 1 second)
+
     def stop_timer(self):
         self.timer.stop()
 
     def timer_callback(self):
         try:
+            if self.switch.mac_addresses:
+                self.populate_lists()
+
             for port, mac_timer_dict in self.switch.mac_addresses.items():
                 macs_to_remove = []
                 for mac, timer in mac_timer_dict.items():
@@ -134,8 +144,7 @@ class Ui(QMainWindow):
                 for mac in macs_to_remove:
                     self.switch.mac_addresses[port].pop(mac)
 
-            if self.switch.mac_addresses:
-                self.populate_lists()
+
 
         except Exception as e:
             print(f"Error in timer_callback: {e}")
