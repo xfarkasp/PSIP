@@ -284,10 +284,24 @@ class Switch(QObject):
 
             if self._pull_out_timer_1 == 0:
                 #print(f"interface: {self.port0_device} disconnected")
-                self.mac_addresses['port1'] = {}
+                self.clear_mac('port1')
                 #print(self.mac_addresses)
 
             if self._pull_out_timer_2 == 0:
                 #print(f"interface: {self.port1_device} disconnected")
-                self.mac_addresses['port2'] = {}
+                self.clear_mac('port2')
                 #print(self.mac_addresses)
+
+    def clear_mac(self, port):
+        if port == 'port1':
+            self.mac_addresses['port1'] = {}
+        elif port == 'port2':
+            self.mac_addresses['port2'] = {}
+        elif port == 'all':
+            self.mac_addresses['port1'] = {}
+            self.mac_addresses['port2'] = {}
+    def clear_stats(self):
+        self._por0_stats_in = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        self._por0_stats_out = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        self._por1_stats_in = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        self._por1_stats_out = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
