@@ -135,7 +135,6 @@ class Switch(QObject):
         if addr in self.mac_addresses[other_port]:
             # Remove the MAC address from the other port
             del self.mac_addresses[other_port][addr]
-            #print(f"MAC address '{addr}' removed from '{other_port}'.")
             #self.port_changed.emit()
 
     def stat_handler(self, col, packet):
@@ -190,7 +189,7 @@ class Switch(QObject):
     def get_port_on(self, dest_mac):
         if dest_mac != BC_MAC:
             for port, mac_dict in self.mac_addresses.items():
-                for mac in mac_dict.items():
+                for mac, _ in mac_dict.items():
                     if mac == dest_mac:
                         return port
         return 'BC'
@@ -228,6 +227,7 @@ class Switch(QObject):
                         self.add_mac_address('port1', src_mac, self._packet_timeout)
                         self.stat_handler(0, packet)
                         port_to_send = self.get_port_on(dst_mac)
+                        print(port_to_send)
                         if port_to_send == 'port2' or port_to_send == 'BC':
                             sendp(packet, iface=self._port1_device)
                             #print("sent to port 2")
@@ -237,6 +237,7 @@ class Switch(QObject):
                         self.add_mac_address('port2', src_mac, self._packet_timeout)
                         self.stat_handler(2, packet)
                         port_to_send = self.get_port_on(dst_mac)
+                        print(port_to_send)
                         if port_to_send == 'port1' or port_to_send == 'BC':
                             sendp(packet, iface=self._port0_device)
                             #print("sent to port 1")

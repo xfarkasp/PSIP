@@ -93,8 +93,9 @@ class Ui(QMainWindow):
                 self.add_separator(list_widget)
 
                 for mac, timer in mac_timer_dict.items():
-                    item = QListWidgetItem(f"{mac}\t{timer}")
-                    list_widget.addItem(item)
+                    if timer != 0:
+                        item = QListWidgetItem(f"{mac}\t{timer}")
+                        list_widget.addItem(item)
         except Exception as e:
             print(f"Error occurred while adding MAC address: {e}")
 
