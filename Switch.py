@@ -306,3 +306,4 @@ class Switch(QObject):
         self._por0_stats_out = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         self._por1_stats_in = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         self._por1_stats_out = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        self.stat_value_changed.emit(-1, [])

@@ -43,6 +43,11 @@ class Ui(QMainWindow):
 
         self.stop_sniffing.clicked.connect(lambda: self.on_stop_sniffing_button_clicked())
 
+        self.clear_table.clicked.connect(lambda: self.on_clear_button_clicked('all'))
+        self.clear_port1.clicked.connect(lambda: self.on_clear_button_clicked('port1'))
+        self.clear_port2.clicked.connect(lambda: self.on_clear_button_clicked('port2'))
+        self.clear_stats.clicked.connect(lambda: self.switch.clear_stats())
+
         # Create an instance of the logic class
         self.switch = Switch()
 
@@ -115,6 +120,16 @@ class Ui(QMainWindow):
 
     @pyqtSlot(int, list)
     def update_stat(self, col_num, new_stats):
+        if col_num == -1:
+            row_count = self.stat_table.rowCount()
+            column_count = self.stat_table.columnCount()
+
+            for row in range(row_count):
+                for column in range(column_count):
+                    item = QTableWidgetItem("0")  # Set the cell value to 0
+                    self.stat_table.setItem(row, column, item)
+            return
+
         index = 0
         for element in new_stats:
             self.stat_table.setItem(index, col_num, QTableWidgetItem(str(element)))
@@ -196,6 +211,11 @@ class Ui(QMainWindow):
         finally:
             # Release the lock to allow other threads to acquire it
             sniffing_on_lock.release()
+
+    def on_clear_button_clicked(self, port):
+        self.switch.clear_mac(port)
+
+
 
     def initUI(self):
         # WIDGETS
