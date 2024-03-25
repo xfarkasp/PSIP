@@ -2,7 +2,7 @@ import sys
 import threading
 
 from PyQt5.QtCore import QTimer, pyqtSlot, Qt, QSize
-from PyQt5.QtGui import QColor, QFont
+from PyQt5.QtGui import QColor, QFont, QPalette
 from PyQt5.QtWidgets import QApplication, QMainWindow, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget, \
     QPlainTextEdit, QSizePolicy, QLabel, QHBoxLayout, QHeaderView, QPushButton, QComboBox, QScrollBar, QListWidgetItem, \
     QListWidget, QMessageBox
@@ -220,7 +220,7 @@ class Ui(QMainWindow):
             ['Ethernet II', 'ARP', 'IP', 'TCP', 'UDP', 'ICMP', 'HTTP', 'HTTPS', 'TELNET', 'TOTAL'])
         self.stat_table.setHorizontalHeaderLabels(
             ['PORT0 INBOUND', 'PORT0 OUTBOUND', 'PORT1 INBOUND', 'PORT1 OUTBOUND'])
-
+        self.stat_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         # Create a QPlainTextEdit for text output
         thread_id = threading.current_thread().ident
         self.output_text.setPlaceholderText(f"Thread ID: {thread_id}")
@@ -290,10 +290,41 @@ class Ui(QMainWindow):
         self.setWindowTitle('The Switcher')
 
 
+def set_color_palette(widget):
+    palette = QPalette()
+
+    # Define custom colors
+    primary_color = QColor(0, 120, 215)  # Primary color (e.g., blue)
+    accent_color = QColor(255, 87, 34)  # Accent color (e.g., orange)
+    background_color = QColor(250, 250, 250)  # Background color
+    text_color = QColor(33, 33, 33)  # Text color
+
+    # Set colors for various parts of the widget
+    palette.setColor(QPalette.Window, background_color)
+    palette.setColor(QPalette.WindowText, text_color)
+    palette.setColor(QPalette.Base, QColor(255, 255, 255))
+    palette.setColor(QPalette.AlternateBase, QColor(238, 238, 238))
+    palette.setColor(QPalette.ToolTipBase, QColor(255, 255, 220))
+    palette.setColor(QPalette.ToolTipText, QColor(0, 0, 0))
+    palette.setColor(QPalette.Text, QColor(0, 0, 0))
+    palette.setColor(QPalette.Button, QColor(240, 240, 240))
+    palette.setColor(QPalette.ButtonText, QColor(0, 0, 0))
+    palette.setColor(QPalette.BrightText, QColor(255, 0, 0))
+    palette.setColor(QPalette.Link, QColor(0, 120, 215))
+    palette.setColor(QPalette.Highlight, QColor(200, 200, 200).lighter())
+    palette.setColor(QPalette.HighlightedText, QColor(0, 0, 0))
+
+    # Apply the palette recursively to all child widgets
+    widget.setPalette(palette)
+    for child in widget.findChildren(QWidget):
+        child.setPalette(palette)
+
+
 def main():
     app = QApplication(sys.argv)
     ex = Ui()
-
+    ex.resize(1200, 660)
+    set_color_palette(ex)
     ex.show()
     sys.exit(app.exec_())
 
