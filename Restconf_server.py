@@ -29,11 +29,23 @@ class RESTCONF:
         @auth.login_required
         def get_port_status(port):
             if port == 'port1':
-                return jsonify(self.switch.mac_addresses['port1'])
+                port_status_dict = self.switch.mac_addresses['port1'].copy()
+                port_status = self.switch._port1_disabled
+                port_status_dict["name"] = self.switch.switch_port1_name
+
             elif port == 'port2':
-                return jsonify(self.switch.mac_addresses['port2'])
+                port_status_dict = self.switch.mac_addresses['port2'].copy()
+                port_status = self.switch._port2_disabled
+                port_status_dict["name"] = self.switch.switch_port2_name
+
             else:
                 return jsonify({"error": "Invalid port specified"}), 400
+
+            if port_status == True:
+                port_status_dict["status"] = "disabled"
+            else:
+                port_status_dict["status"] = "enabled"
+            return jsonify(port_status_dict)
 
         @app.route('/<port>', methods=['PUT'])
         @auth.login_required
@@ -51,6 +63,19 @@ class RESTCONF:
                     return jsonify({"error": "Invalid port specified"}), 400
 
                 return jsonify({"message": f"New port name {new_port_name} set to {port}"}), 200
+
+            elif 'disable' in data:
+                status = data['disable']
+                if port == 'port1':
+                    self.switch._port1_disabled = status
+                elif port == 'port2':
+                    self.switch._port2_disabled = status
+                elif port == 'switch':
+                    self.switch._port1_disabled = status
+                    self.switch._port2_disabled = status
+                else:
+                    return jsonify({"error": "Invalid port specified"}), 400
+                return jsonify({"message": f"{port} status changed"}), 200
             else:
                 return jsonify({"error": "Timeout value not provided"}), 400
 
@@ -70,8 +95,6 @@ class RESTCONF:
                 return jsonify({"message": f"Packet timeout set to {new_timeout}"}), 200
             else:
                 return jsonify({"error": "Timeout value not provided"}), 400\
-
-
 
         @app.route('/switch/<port>', methods=['PUT'])
         @auth.login_required

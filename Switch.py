@@ -55,6 +55,9 @@ class Switch(QObject):
         self._switch_port1_name = "PORT1"
         self._switch_port2_name = "PORT2"
 
+        self._port1_disabled = True
+        self._port2_disabled = True
+
         self.restconf = RESTCONF(self)
 
         restconf_thread = threading.Thread(target=self.start_restconf)
@@ -66,10 +69,16 @@ class Switch(QObject):
         app.run(debug=False, host='0.0.0.0')
 
     def stop_sniffing(self, packet):
+        if self.sniffing_on == True:
+            self._port1_disabled = True
+            self._port2_disabled = True
         return self.sniffing_on
 
     def start_sniffing(self):
         try:
+            self._port1_disabled = False
+            self._port2_disabled = False
+
             sniff(iface=[self._port0_device, self._port1_device], prn=self.packet_callback, store=0, stop_filter=self.stop_sniffing)
 
         except Exception as e:
@@ -241,6 +250,10 @@ class Switch(QObject):
 
     def packet_callback(self, packet):
         try:
+            interface = packet.sniffed_on
+            if (self._port1_disabled and interface == self.port0_device) or (self._port2_disabled and interface == self.port1_device):
+                return
+
             if self.is_interface_connected(self.port0_device) is True:
                 self._pull_out_timer_1 = 7
             if self.is_interface_connected(self.port1_device) is True:
@@ -252,7 +265,7 @@ class Switch(QObject):
                 dst_mac = packet[Ether].dst
                 if src_mac == dst_mac:
                     return
-                interface = packet.sniffed_on
+
                 if src_mac == get_if_hwaddr(interface):
                     #print("Packet sent by the program, skipping processing.")
                     return
