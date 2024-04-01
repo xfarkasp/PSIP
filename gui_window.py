@@ -17,6 +17,10 @@ class Ui(QMainWindow):
         self.output_text = QPlainTextEdit(self)
         self.timer_input_field = QPlainTextEdit(self)
 
+        self.hostname_label = QLabel("switch")
+        self.port1_name_label = QLabel("")
+        self.port2_name_label = QLabel("")
+
         self.timer_update_button = QPushButton('Set', self)
         self.start_sniffing = QPushButton('Start sniffing', self)
         self.stop_sniffing = QPushButton('Stop sniffing', self)
@@ -56,6 +60,7 @@ class Ui(QMainWindow):
         # old logic: self.switch.port0_changed.connect(self.update_port_0)
         self.switch.port_changed.connect(lambda: self.populate_lists())
         self.switch.stat_value_changed.connect(self.update_stat)
+        self.switch.port_name_changed.connect(self.create_port_label)
 
         self.initUI()
 
@@ -68,8 +73,18 @@ class Ui(QMainWindow):
         # self.pull_out_timer.timeout.connect(self.switch.pull_out_method)
         # self.start_pull_out_timer()
 
-    def create_port_label(self, text):
-        label = QLabel(text)
+    def create_port_label(self, port, text):
+        label = None
+        if port == 'port1':
+            label = self.port1_name_label
+        elif port == 'port2':
+            label = self.port2_name_label
+        elif port == 'switch':
+            label = self.hostname_label
+        else:
+            return
+
+        label.setText(text)
         label.setAlignment(Qt.AlignCenter)
         label.setFont(QFont("Arial", 14, QFont.Bold))
         return label
@@ -219,15 +234,18 @@ class Ui(QMainWindow):
 
     def initUI(self):
         # WIDGETS
+        header_layout = QHBoxLayout()
+        header_layout.addWidget(self.create_port_label('switch', "switch"))
+
         layoutMac = QHBoxLayout()  # Horizontal layout
         # Create a QVBoxLayout for each port
         port1_layout = QVBoxLayout()
         port2_layout = QVBoxLayout()
 
-        port1_layout.addWidget(self.create_port_label("Port 1"))  # Add port name label
+        port1_layout.addWidget(self.create_port_label('port1', "Port 1"))  # Add port name label
         port1_layout.addWidget(self.port1_widget)
 
-        port2_layout.addWidget(self.create_port_label("Port 2"))  # Add port name label
+        port2_layout.addWidget(self.create_port_label('port2', "Port 2"))  # Add port name label
         port2_layout.addWidget(self.port2_widget)
 
         # Add the QVBoxLayouts to the main QHBoxLayout
@@ -285,6 +303,7 @@ class Ui(QMainWindow):
         clear_ports_layout.addWidget(self.clear_port2)
 
         # create the input layout
+        input_layout.addLayout(header_layout)
         input_layout.addLayout(port_select_layout)
         input_layout.addLayout(sniffing_layout)
         input_layout.addLayout(delay_update_layout)

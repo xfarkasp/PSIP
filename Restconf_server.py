@@ -35,6 +35,25 @@ class RESTCONF:
             else:
                 return jsonify({"error": "Invalid port specified"}), 400
 
+        @app.route('/<port>', methods=['PUT'])
+        @auth.login_required
+        def set_port_name(port):
+            data = request.json
+            if 'port_name' in data:
+                new_port_name = data['port_name']
+                if port == 'port1':
+                    self.switch.switch_port1_name = new_port_name
+                elif port == 'port2':
+                    self.switch.switch_port2_name = new_port_name
+                elif port == 'switch':
+                    self.switch.switch_hostname = new_port_name
+                else:
+                    return jsonify({"error": "Invalid port specified"}), 400
+
+                return jsonify({"message": f"New port name {new_port_name} set to {port}"}), 200
+            else:
+                return jsonify({"error": "Timeout value not provided"}), 400
+
         @app.route('/timer', methods=['GET'])
         @auth.login_required
         def get_timer():
@@ -50,7 +69,9 @@ class RESTCONF:
                 self.switch.packet_timeout = new_timeout
                 return jsonify({"message": f"Packet timeout set to {new_timeout}"}), 200
             else:
-                return jsonify({"error": "Timeout value not provided"}), 400
+                return jsonify({"error": "Timeout value not provided"}), 400\
+
+
 
         @app.route('/switch/<port>', methods=['PUT'])
         @auth.login_required

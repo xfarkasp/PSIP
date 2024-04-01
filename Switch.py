@@ -25,6 +25,7 @@ class Switch(QObject):
     port1_changed = pyqtSignal()
     log_value_changed = pyqtSignal(str)
     stat_value_changed = pyqtSignal(int, list)
+    port_name_changed = pyqtSignal(str, str)
 
     def __init__(self):
         super().__init__()  # Call the superclass __init__ method
@@ -49,6 +50,10 @@ class Switch(QObject):
         self.sent_frame_que = queue.Queue()
 
         self.unique_packet_hashes = set()
+
+        self._switch_hostname = "switch"
+        self._switch_port1_name = "PORT1"
+        self._switch_port2_name = "PORT2"
 
         self.restconf = RESTCONF(self)
 
@@ -97,6 +102,18 @@ class Switch(QObject):
     def port0_timer(self):
         return self._port0_timer
 
+    @property
+    def switch_port1_name(self):
+        return self._switch_port1_name
+
+    @property
+    def switch_port2_name(self):
+        return self._switch_port2_name
+
+    @property
+    def switch_hostname(self):
+        return self._switch_hostname
+
     @packet_timeout.setter
     def packet_timeout(self, new_value):
         self._packet_timeout = new_value
@@ -128,6 +145,21 @@ class Switch(QObject):
     @port0_timer.setter
     def port0_timer(self, new_value):
         self._port0_timer = new_value
+
+    @switch_port1_name.setter
+    def switch_port1_name(self, new_value):
+        self._switch_port1_name = new_value
+        self.port_name_changed.emit('port1', new_value)
+
+    @switch_port2_name.setter
+    def switch_port2_name(self, new_value):
+        self._switch_port2_name = new_value
+        self.port_name_changed.emit('port2', new_value)
+
+    @switch_hostname.setter
+    def switch_hostname(self, new_value):
+        self._switch_hostname = new_value
+        self.port_name_changed.emit('switch', new_value)
 
     def add_mac_address(self, port, mac_address, timer_value):
         self.duplicity_check(mac_address, port)
