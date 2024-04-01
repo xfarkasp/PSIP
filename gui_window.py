@@ -267,7 +267,7 @@ class Ui(QMainWindow):
         input_layout = QVBoxLayout()
 
         self.timer_input_field.setMaximumHeight(30)
-        self.timer_input_field.setMaximumWidth(100)
+        self.timer_input_field.setMaximumWidth(108)
         # combo boxes
         port_select_layout.addWidget(self.port0_combo_box)
         port_select_layout.addWidget(self.port1_combo_box)
