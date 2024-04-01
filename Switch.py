@@ -1,5 +1,6 @@
 import hashlib
 import queue
+import threading
 
 import psutil
 from scapy.all import sniff
@@ -12,6 +13,8 @@ from scapy.layers.l2 import Ether, ARP
 from scapy.layers.inet import IP, TCP, UDP, ICMP
 from scapy.layers.http import HTTPRequest
 from scapy.sendrecv import sendp
+
+from Restconf_server import RESTCONF, app
 
 BC_MAC = "FF:FF:FF:FF:FF:FF"
 
@@ -47,6 +50,15 @@ class Switch(QObject):
 
         self.unique_packet_hashes = set()
 
+        self.restconf = RESTCONF(self)
+
+        restconf_thread = threading.Thread(target=self.start_restconf)
+        restconf_thread.daemon = True
+        restconf_thread.start()
+
+
+    def start_restconf(self):
+        app.run(debug=False, host='192.168.1.26')
     def stop_sniffing(self, packet):
         return self.sniffing_on
 
