@@ -63,7 +63,8 @@ class Switch(QObject):
 
 
     def start_restconf(self):
-        app.run(debug=False, host='192.168.1.26')
+        app.run(debug=False, host='0.0.0.0')
+
     def stop_sniffing(self, packet):
         return self.sniffing_on
 

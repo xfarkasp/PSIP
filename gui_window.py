@@ -16,12 +16,15 @@ class Ui(QMainWindow):
 
         self.output_text = QPlainTextEdit(self)
         self.timer_input_field = QPlainTextEdit(self)
+        #self.restconf_ip_input_field = QPlainTextEdit(self)
 
         self.hostname_label = QLabel("switch")
         self.port1_name_label = QLabel("")
         self.port2_name_label = QLabel("")
 
-        self.timer_update_button = QPushButton('Set', self)
+        self.timer_update_button = QPushButton('Set timer', self)
+        #self.restconf_ip_button = QPushButton('Set restconf IP', self)
+
         self.start_sniffing = QPushButton('Start sniffing', self)
         self.stop_sniffing = QPushButton('Stop sniffing', self)
         self.clear_table = QPushButton('Clear table', self)
@@ -282,10 +285,14 @@ class Ui(QMainWindow):
         sniffing_layout = QHBoxLayout()
         clear_all_layout = QHBoxLayout()
         clear_ports_layout = QHBoxLayout()
+        # restconf_layout = QHBoxLayout()
         input_layout = QVBoxLayout()
 
         self.timer_input_field.setMaximumHeight(30)
         self.timer_input_field.setMaximumWidth(108)
+
+        # self.restconf_ip_input_field.setMaximumHeight(30)
+        # self.restconf_ip_input_field.setMaximumWidth(108)
         # combo boxes
         port_select_layout.addWidget(self.port0_combo_box)
         port_select_layout.addWidget(self.port1_combo_box)
@@ -301,6 +308,9 @@ class Ui(QMainWindow):
         # clear specific port mac tables
         clear_ports_layout.addWidget(self.clear_port1)
         clear_ports_layout.addWidget(self.clear_port2)
+        #restconf layout
+        # restconf_layout.addWidget(self.restconf_ip_input_field)
+        # restconf_layout.addWidget(self.restconf_ip_button)
 
         # create the input layout
         input_layout.addLayout(header_layout)
@@ -309,6 +319,7 @@ class Ui(QMainWindow):
         input_layout.addLayout(delay_update_layout)
         input_layout.addLayout(clear_all_layout)
         input_layout.addLayout(clear_ports_layout)
+        #input_layout.addLayout(restconf_layout)
 
         mac_layout.addLayout(layoutMac)
         mac_layout.addLayout(input_layout)
@@ -329,41 +340,10 @@ class Ui(QMainWindow):
         self.setWindowTitle('The Switcher')
 
 
-def set_color_palette(widget):
-    palette = QPalette()
-
-    # Define custom colors
-    primary_color = QColor(0, 120, 215)  # Primary color (e.g., blue)
-    accent_color = QColor(255, 87, 34)  # Accent color (e.g., orange)
-    background_color = QColor(250, 250, 250)  # Background color
-    text_color = QColor(33, 33, 33)  # Text color
-
-    # Set colors for various parts of the widget
-    palette.setColor(QPalette.Window, background_color)
-    palette.setColor(QPalette.WindowText, text_color)
-    palette.setColor(QPalette.Base, QColor(255, 255, 255))
-    palette.setColor(QPalette.AlternateBase, QColor(238, 238, 238))
-    palette.setColor(QPalette.ToolTipBase, QColor(255, 255, 220))
-    palette.setColor(QPalette.ToolTipText, QColor(0, 0, 0))
-    palette.setColor(QPalette.Text, QColor(0, 0, 0))
-    palette.setColor(QPalette.Button, QColor(240, 240, 240))
-    palette.setColor(QPalette.ButtonText, QColor(0, 0, 0))
-    palette.setColor(QPalette.BrightText, QColor(255, 0, 0))
-    palette.setColor(QPalette.Link, QColor(0, 120, 215))
-    palette.setColor(QPalette.Highlight, QColor(200, 200, 200).lighter())
-    palette.setColor(QPalette.HighlightedText, QColor(0, 0, 0))
-
-    # Apply the palette recursively to all child widgets
-    widget.setPalette(palette)
-    for child in widget.findChildren(QWidget):
-        child.setPalette(palette)
-
-
 def main():
     app = QApplication(sys.argv)
     ex = Ui()
     ex.resize(1200, 660)
-    set_color_palette(ex)
     ex.show()
     sys.exit(app.exec_())
 
