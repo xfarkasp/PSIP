@@ -17,6 +17,7 @@ from scapy.sendrecv import sendp
 from Restconf_server import RESTCONF, app
 
 BC_MAC = "FF:FF:FF:FF:FF:FF"
+restconf_ip = '192.168.0.70'
 
 
 class Switch(QObject):
@@ -55,6 +56,8 @@ class Switch(QObject):
         self._switch_port1_name = "PORT1"
         self._switch_port2_name = "PORT2"
 
+        self._restconf_device = "restconf"
+
         self._port1_disabled = True
         self._port2_disabled = True
 
@@ -66,7 +69,7 @@ class Switch(QObject):
 
 
     def start_restconf(self):
-        app.run(debug=False, host='0.0.0.0')
+        app.run(debug=False, host=restconf_ip)
 
     def stop_sniffing(self, packet):
         if self.sniffing_on == True:
@@ -79,7 +82,7 @@ class Switch(QObject):
             self._port1_disabled = False
             self._port2_disabled = False
 
-            sniff(iface=[self._port0_device, self._port1_device], prn=self.packet_callback, store=0, stop_filter=self.stop_sniffing)
+            sniff(iface=[self._port0_device, self._port1_device, self._restconf_device], prn=self.packet_callback, store=0, stop_filter=self.stop_sniffing)
 
         except Exception as e:
             print("An error occurred during packet sniffing:", e)
@@ -266,8 +269,8 @@ class Switch(QObject):
                 if src_mac == dst_mac:
                     return
 
-                if src_mac == get_if_hwaddr(interface):
-                    #print("Packet sent by the program, skipping processing.")
+                if src_mac == get_if_hwaddr(interface) and interface is not self._restconf_device:
+                    print("Packet sent by the program, skipping processing.")
                     return
 
                 # Calculate hash from packet data
@@ -280,6 +283,34 @@ class Switch(QObject):
 
                     #print(f"Received frame from {src_mac} to {dst_mac}")
                     self.log_value = f"Received frame from {src_mac} to {dst_mac}"
+
+                    # Handle ARP packets
+                    if ARP in packet:
+                        # Modify ARP packets to ensure they are forwarded to/from the RESTCONF interface
+                        arp_packet = packet[ARP]
+                        # Modify ARP packets to ensure they are forwarded to/from the RESTCONF interface
+                        if arp_packet.op == 1 and arp_packet.pdst == restconf_ip:
+                            # Forward ARP requests to the RESTCONF interface
+                            if interface == self._port0_device:
+                                self.add_mac_address('port1', src_mac, self._packet_timeout)
+                                self.stat_handler(0, packet)
+                            elif interface == self._port1_device:
+                                self.add_mac_address('port2', src_mac, self._packet_timeout)
+                                self.stat_handler(2, packet)
+                            sendp(packet, iface=self._restconf_device)
+                            return
+
+                    if IP in packet:
+                        if interface == self._restconf_device:
+                            # Allow only ARP communication and TCP packets with destination port 5000
+                            if ARP in packet or (TCP in packet and packet[TCP].dport == 5000):
+                                sendp(packet, iface=interface)
+                                return
+
+                    if IP in packet:
+                        if packet[IP].dst == restconf_ip:
+                            print("restconf request")
+                            sendp(packet, iface=self._restconf_device)
 
                     if interface == self.port0_device:
                         self.add_mac_address('port1', src_mac, self._packet_timeout)
@@ -301,8 +332,17 @@ class Switch(QObject):
                             #print("sent to port 1")
                             self.stat_handler(1, packet)
 
+                    if interface == self._restconf_device:
+                        print("restcong")
+                        print(packet)
+                        port_to_send = self.get_port_on(dst_mac)
+                        if port_to_send == 'port1':
+                            sendp(packet, iface=self._port0_device)
+                        elif port_to_send == 'port2':
+                            sendp(packet, iface=self._port1_device)
+
                 else:
-                    #print("packet was already processed")
+                    print("packet was already processed")
                     self.unique_packet_hashes.remove(packet_hash)
 
         except Exception as e:
