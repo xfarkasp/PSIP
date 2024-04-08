@@ -1,12 +1,15 @@
 from flask import Flask, request, jsonify
 from flask_httpauth import HTTPBasicAuth
+import os
+
+# Access the environment variables
+ADMIN_USERNAME = os.environ.get("RESTCONF_USERNAME")
+ADMIN_PASSWORD = os.environ.get("RESTCONF_PASSWORD")
+print(ADMIN_USERNAME)
+print(ADMIN_PASSWORD)
 
 app = Flask(__name__)
 auth = HTTPBasicAuth()
-
-users = {
-    "admin": "password"
-}
 
 class RESTCONF:
     def __init__(self, switch_instance):
@@ -16,7 +19,7 @@ class RESTCONF:
     # Verify user credentials
     @auth.verify_password
     def verify_password(username, password):
-        if username in users and users[username] == password:
+        if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
             return username
 
     def init_routes(self):
@@ -101,3 +104,28 @@ class RESTCONF:
         def configure_port(port):
             # Your implementation here
             return jsonify({"message": f"Configuration for port {port} updated successfully"}), 200
+
+        @app.route('/gui', methods=['PUT'])
+        @auth.login_required
+        def gui_changes():
+            data = request.json
+            if 'stop' in data:
+
+                status = data['stop']
+                self.switch._port1_disabled = status
+                self.switch._port2_disabled = status
+
+            if 'clear' in data:
+                if "all" in data["clear"]:
+                    self.switch.clear_mac('all')
+
+                if "port1" in data["clear"]:
+                    self.switch.clear_mac('port1')
+
+                if "port2" in data["clear"]:
+                    self.switch.clear_mac('port2')
+
+                if "stats" in data["clear"]:
+                    self.switch.clear_stats()
+
+            return jsonify({"message": f"gui_changes_updated"}), 200
