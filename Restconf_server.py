@@ -94,6 +94,7 @@ class RESTCONF:
             data = request.json
             if 'timeout' in data:
                 new_timeout = data['timeout']
+                self.switch.restconf_changed_timer.emit(self.switch.packet_timeout, new_timeout)
                 self.switch.packet_timeout = new_timeout
                 return jsonify({"message": f"Packet timeout set to {new_timeout}"}), 200
             else:

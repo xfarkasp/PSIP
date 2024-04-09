@@ -27,6 +27,7 @@ class Switch(QObject):
     log_value_changed = pyqtSignal(str)
     stat_value_changed = pyqtSignal(int, list)
     port_name_changed = pyqtSignal(str, str)
+    restconf_changed_timer = pyqtSignal(int, int)
 
     def __init__(self):
         super().__init__()  # Call the superclass __init__ method
@@ -270,7 +271,7 @@ class Switch(QObject):
                     return
 
                 if src_mac == get_if_hwaddr(interface) and interface is not self._restconf_device:
-                    print("Packet sent by the program, skipping processing.")
+                    #print("Packet sent by the program, skipping processing.")
                     return
 
                 # Calculate hash from packet data
@@ -279,6 +280,8 @@ class Switch(QObject):
                 # Check if packet hash is already in the set
                 if packet_hash not in self.unique_packet_hashes:
                     # Add hash to the set
+                    # if (ARP not in packet or (TCP in packet and packet[TCP].dport != 5000)):
+                    #     return
                     self.unique_packet_hashes.add(packet_hash)
 
                     #print(f"Received frame from {src_mac} to {dst_mac}")
@@ -297,6 +300,9 @@ class Switch(QObject):
                             elif interface == self._port1_device:
                                 self.add_mac_address('port2', src_mac, self._packet_timeout)
                                 self.stat_handler(2, packet)
+                            sendp(packet, iface=self._restconf_device)
+                            return
+                        if arp_packet.op == 2 and dst_mac == get_if_hwaddr(self._restconf_device):
                             sendp(packet, iface=self._restconf_device)
                             return
 
@@ -340,9 +346,12 @@ class Switch(QObject):
                             sendp(packet, iface=self._port0_device)
                         elif port_to_send == 'port2':
                             sendp(packet, iface=self._port1_device)
+                        else:
+                            sendp(packet, iface=self._port1_device)
+                            sendp(packet, iface=self._port0_device)
+
 
                 else:
-                    print("packet was already processed")
                     self.unique_packet_hashes.remove(packet_hash)
 
         except Exception as e:

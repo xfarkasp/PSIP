@@ -65,6 +65,9 @@ class Ui(QMainWindow):
         self.switch.stat_value_changed.connect(self.update_stat)
         self.switch.port_name_changed.connect(self.create_port_label)
 
+        self.switch.restconf_changed_timer.connect(lambda old_timer_value, new_value: self.timer_value_updater(old_timer_value, new_value))
+
+
         self.initUI()
 
         # start timer for decrementing timeout
@@ -190,6 +193,12 @@ class Ui(QMainWindow):
         selected_text = self.port1_combo_box.currentText()
         self.switch.port1_device = selected_text
 
+    def timer_value_updater(self, old_timer_value, new_value):
+        if old_timer_value > new_value:
+            for port, mac_timer_dict in self.switch.mac_addresses.items():
+                for mac, timer in mac_timer_dict.items():
+                    if self.switch.mac_addresses[port][mac] >= self.switch.packet_timeout:
+                        self.switch.mac_addresses[port][mac] = 0
     def on_timer_update_button_clicked(self):
         try:
             text = self.timer_input_field.toPlainText()
@@ -200,11 +209,7 @@ class Ui(QMainWindow):
                 # set the global timer value
                 self.switch.packet_timeout = number
                 # compare if old timer value was greater than new to remove outdated entries
-                if old_timer_value > number:
-                    for port, mac_timer_dict in self.switch.mac_addresses.items():
-                        for mac, timer in mac_timer_dict.items():
-                            if self.switch.mac_addresses[port][mac] >= self.switch.packet_timeout:
-                                self.switch.mac_addresses[port][mac] = 0
+                self.timer_value_updater(old_timer_value, number)
 
             else:
                 QMessageBox.warning(self, 'Non-Numeric Input', 'Please enter a numeric value.')
